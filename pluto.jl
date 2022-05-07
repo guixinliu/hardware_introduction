@@ -13,37 +13,37 @@ end
 
 # ╔═╡ 15f5c31a-8aef-11eb-3f19-cf0a4e456e7a
 md"""
-# What scientists must know about hardware to write fast code
+# 科学家为编写快速代码所必须了解的硬件知识
 
-**Find this notebook at https://github.com/jakobnissen/hardware_introduction**
+**本手册的英文版位于 https://github.com/jakobnissen/hardware_introduction**
 
-Programming is used in many fields of science today, where individual scientists often have to write custom code for their own projects. For most scientists, however, computer science is not their field of expertise; They have learned programming by necessity. I count myself as one of them. While we may be reasonably familiar with the *software* side of programming, we rarely have even a basic understanding of how computer *hardware* impacts code performance.
+如今许多科学领域都用到了编程，这些领域内的科学家们通常不得不为自己的项目编写定制的代码。然而，对于大多数科学家来说，计算机科学不是他们的专业领域；他们不可避免地需要学习编程。我认为自己就是其中之一。虽然我们可能对编程的**软件**方面比较熟悉，但是我们对计算机**硬件**如何影响代码性能甚至很少有基本的认识。
 
-The aim of this tutorial is to give non-professional programmers a *brief* overview of the features of modern hardware that you must understand in order to write fast code. It will be a distillation of what have learned the last few years. This tutorial will use Julia because it allows these relatively low-level considerations to be demonstrated easily in a high-level, interactive language.
+本教程的目标是向业余编程选手提供现代硬件特性的**简明**概述，其中只包含了编写快速代码所必须了解的特性。这将是对过去几年所学知识的升华。本教程将使用 Julia， 因为它能够使用高级交互式语言轻松地演示这些相对低层级的考虑。
 
-## What this notebook is not
-#### This is not a guide to the Julia programming language
-To write fast code, you must first understand your programming language and its idiosyncrasies. But this is *not* a guide to the Julia programming language. I recommend reading the [performance tips section](https://docs.julialang.org/en/v1/manual/performance-tips/) of the Julia documentation.
+## 这份手册不是什么
+#### 这不是关于 Julia 编程语言的指南 
+为了编写快速代码，你必须首先了解你的编程语言及其特性。但这**不是**关于 Julia 编程语言的指南。我建议阅读 Julia 文档中的[性能建议](https://docs.juliacn.com/latest/manual/performance-tips/) 节。
 
-#### This is not an explanation of specific data structures or algorithms
-Besides knowing your language, you must also know your own code to make it fast. You must understand the idea behind big-O notation, why some algorithms are faster than others, and how different data structures work internally. Without knowing *what an `Array` is*, how could you possibly optimize code making use of arrays?
+#### 这不是关于特定数据结构或算法的说明
+为了加速代码，除了要弄明白编程语言，你也必须理解你自己的代码。你必须了解大 O 记号，为什么一些算法比其他算法快, 以及不同数据结构内部如何组织。若是不知道**什么是`Array`**，又怎么能够使用数组优化代码？
 
-This too, is outside the scope of this paper. However, I would say that as a minimum, a programmer should have an understanding of:
+这同样超出了本文的范围。然而，我想说的是，一个编程选手至少应该了解：
 
-* How a binary integer is represented in memory
-* How a floating point number is represented in memory (learning this is also necessary to understand computational inaccuracies from floating point operations, which is a must when doing scientific programming)
-* The memory layout of a `String` including ASCII and UTF-8 encoding
-* The basics of how an `Array` is structured, and what the difference between a dense array of e.g. integers and an array of references to objects are
-* The principles behind how a `Dict` (i.e. hash table) and a `Set` works
+* 二进制整数在内存中的表示方式
+* 浮点数在内存中的表示方式（学习这点也是必要的，因为这有助于理解浮点运算的计算误差，而浮点运算是科学计算中不可或缺的部分）
+* `String` 的内存布局，包括 ASCII 和 UTF-8 编码
+* 关于`Array` 结构化的基本知识，以及由数构成的稠密数组与对象引用数组之间的区别
+* `Dict`（例如，哈希表）和 `Set` 背后的工作原理
 
-Furthermore, I would also recommend familiarizing yourself with:
+此外，我还建议熟悉：
 
-* Heaps
-* Deques
-* Tuples
+* 堆（Heap）
+* 双端队列（Deque）
+* 元组（Tuple）
 
-#### This is not a tutorial on benchmarking your code
-To write fast code *in practice*, it is necessary to profile your code to find bottlenecks where your machine spends the majority of the time. One must benchmark different functions and approaches to find the fastest in practice. Julia (and other languages) have tools for exactly this purpose, but I will not cover them here.
+#### 这不是关于代码基准测试的教程
+**实际**编写快速代码时，测试代码查找瓶颈是非常有必要的，即找出机器消耗大多数时间的地方。通常必须需要对不同的函数和方法进行基准测试，才能找到最快实践。Julia（以及其他语言）为此提供了工具，但此处不做介绍。
 """
 
 # ╔═╡ 5dd2329a-8aef-11eb-23a9-7f3c325bcf74
@@ -133,6 +133,13 @@ To illustrate this, let's compare the performance of the `random_access` functio
 
 Notice the large discrepancy in time spent - a difference of around 70x.
 """
+
+# ╔═╡ b73605ca-8ee4-11eb-1a0d-bb6678de91c6
+begin
+    @btime random_access($(rand(UInt, 1024)), 2^20) seconds=1
+    @btime random_access($(rand(UInt, 2^24)), 2^20) seconds=1
+    nothing
+end
 
 # ╔═╡ c6da4248-8c19-11eb-1c16-093695add9a9
 md"""
@@ -609,13 +616,6 @@ let
     nothing
 end
 
-# ╔═╡ b73605ca-8ee4-11eb-1a0d-bb6678de91c6
-begin
-    @btime random_access($(rand(UInt, 1024)), 2^20) seconds=1
-    @btime random_access($(rand(UInt, 2^24)), 2^20) seconds=1
-    nothing
-end
-
 # ╔═╡ ffca4c72-8aef-11eb-07ac-6d5c58715a71
 function linear_access(data::Vector{UInt}, N::Integer)
     n = rand(UInt)
@@ -828,6 +828,9 @@ Consider the assembly of this function:"
 
 # ╔═╡ 36b723fc-8ee9-11eb-1b92-451b992acc0c
 f() = error();
+
+# ╔═╡ 37cd1f1c-8ee9-11eb-015c-ade9efc27708
+@code_native f()
 
 # ╔═╡ 8af63980-8af2-11eb-3028-83a935bac0db
 md"""
@@ -1305,9 +1308,6 @@ begin
         return M
     end
 end;
-
-# ╔═╡ 37cd1f1c-8ee9-11eb-015c-ade9efc27708
-@code_native f()
 
 # ╔═╡ 39a85a58-8af3-11eb-1334-6f50ed9acd31
 @time julia_single_threaded();
