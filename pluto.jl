@@ -52,9 +52,9 @@ md"""
 """
 
 # ╔═╡ 5dd2329a-8aef-11eb-23a9-7f3c325bcf74
-md"""## Setting up this notebook
+md"""## notebook 的初始化设置
 
-If you don't already have these packages installed, uncomment these lines and run them:
+如果你没有安装如下的软件包，请取消注释下面几行，并运行它们：
 """
 
 # ╔═╡ 7490def0-8aef-11eb-19ce-4b11ce5a9328
@@ -68,50 +68,50 @@ TableOfContents()
 
 # ╔═╡ 9a24985a-8aef-11eb-104a-bd9abf0adc6d
 md"""
-## The basic structure of computer hardware
+## 计算机硬件的基本结构
 
-For now, we will work with a simplified mental model of a computer. Through this document, I will add more details to our model as they become relevant.
+现在，我们将从一个计算机体系的简化模型开始。在本教程中，我将在后续相关章节时增加更多模型细节。
 
 $$[CPU] ↔ [RAM] ↔ [DISK]$$
 
-In this simple, uh, "diagram", the arrows represent data flow in either direction. The diagram shows three important parts of a computer:
+上图中的箭头指示了数据流的方向。此图展示了计算机的三个重要组成部分：
 
-* The central processing unit (CPU) is a chip the size of a stamp. This is where all the computation actually occurs, the brain of the computer.
-* Random access memory (RAM, or just "memory") is the short-term memory of the computer. This memory requires electrical power to maintain, and is lost when the computer is shut down. RAM serves as a temporary storage of data between the disk and the CPU. Much of time spent "loading" various applications and operating systems is actually spent moving data from disk to RAM and unpacking it there. A typical consumer laptop has around $10^{11}$ bits of RAM memory.
-* The disk is a mass storage unit. This data on disk persists after power is shut down, so the disk contains the long-term memory of the computer. It is also much cheaper per gigabyte than RAM, with consumer PCs having around $10^{13}$ bits of disk space.
+* 中央处理器（CPU）是一个邮票大小的芯片。它是计算机的大脑，即进行运算的地方。
+* 随机存取存储器（RAM，或简称“内存”）是计算机的短期存储器。该存储器需要电源来维持，而且当电脑关机时会遗失数据。RAM 临时地存储了在 CPU 和硬盘之间传输的数据。“加载”各种应用程序和操作系统所消耗的大部分时间都是用来将数据从硬盘转移到 RAM，并在RAM解压数据。典型的个人消费级笔记本电脑的 RAM 容量约为$10^{11}$ 比特。
+* 硬盘是大容量存储单元。这些硬盘上的数据在断开电源后依然存在，因此它涵盖了计算机的长期存储。每GB的硬盘比 RAM 便宜很多，个人消费级电脑的硬盘容量约为 $10^{13}$ 比特。
 """
 
 # ╔═╡ a2fad250-8aef-11eb-200f-e5f8caa57a67
 md"""
-## Avoid accessing disk too often
-When discussing software performance, it's useful to distinguish between *throughput* and *latency*. Latency is the time it takes from something begins until it is finished. Throughput is a measure of how much stuff gets done in a set amount of time.
+## 避免频繁访问硬盘
+在讨论软件性能时，区分 **吞吐量** 和 **延迟** 很有用。延迟是指事件开始到完成所花费的时间。吞吐量是指在一定时间内能够完成多少工作量的指标。
 
-On the surface, the relationship between latency and throughput seems obvious: If an operation takes $N$ seconds to compute, then $1/N$ operations can be done per second. So you would think:
+从表面来看，延迟和吞吐量之间的关系看起来很明显：如果一个操作需要进行 $N$ 秒的计算，那么每秒只能执行$1/N$个操作。所以你会朴素地认为：
 
-Naive equation: $$throughput = \frac{1}{latency}$$
+$$吞吐量 = \frac{1}{延迟}$$
 
-In reality, it's not so simple. For example, imagine an operation that has a 1 second "warmup" before it begins, but afterwards completes in 0.1 seconds. The latency is thus 1.1 seconds, but it's throughput after the initial warmup is 10 ops/second.
+实际上并不是这么简单。例如，设想如下的操作：需要 1 秒用于在开始前预热，但预热后每次操作只需 0.1 秒。该操作的 延迟 是 1.1 秒，但他预热后的吞吐量是 10 操作/秒。
 
-Or, imagine a situation with an operation with a latency of 1 second, but where 8 operations can be run concurrently. In bulk, these operations can be run with a throughput of 8 ops/second.
+或者，设想如下的情形：需要 1 秒的 延迟，但是能够同时执行8个操作。当批量运行时，这些操作的吞吐量为 8 操作/秒。
 
-One place where it's useful to distinguish between latency and throughput is when programs read from the disk. Most modern computers use a type of disk called a *solid state drive (SSD)*. In round numbers, current (2021) SSD's have latencies around 100 µs, and read/write throughputs of well over 1 GB/s. Older, or cheaper mass-storage disks are of the *hard disk drive (HDD)* type. These have latencies 100 times larger, at near 10 ms, and 10 times lower throughput of 100 MB/s.
+硬盘读取是一个值得区分延迟和吞吐量的时机。大多数现代电脑使用的硬盘类型为**固态硬盘（SSD）**。粗略地讲，目前（2021年） SSD 的延迟约为 100 µs，同时读/写的吞吐量远远超过 1 GB/s。另一种相对较旧或者说廉价的大容量硬盘类型是 **机械硬盘（HDD）**。相比于SSD，它们的延迟要慢 100 倍，大约 10 ms，同时吞吐量也小 10 倍，约为 100 MB/s。
 
-Even the latest, fastest SSDs has latencies thousands of times slower than RAM, whose latency is below 100 nanoseconds. Disk latency is incurred whenever a read or write happen. To write fast code, you must therefore at all costs avoid repeatedly reading from, or writing to disk.
+相比于RAM 100 ns 以下的延迟，即使是最新最快的 SSD，其延迟也比 RAM 慢上数千倍。 每一次读或写操作都会触发硬盘延迟。因此，为了编写高性能代码，必须不惜一切代价来避免重复的硬盘读写。
 
-The following example serves to illustrate the difference in latency: The first function opens a file, accesses one byte from the file, and closes it again. The second function randomly accesses 1,000,000 integers from RAM.
+以下示例用于说明 延迟 的差异：第一个函数会打开一个文件，访问文件的一个字节，最后关闭文件。第二个函数则会随机访问 RAM 中的 1,000,000 个整数。
 """
 
 # ╔═╡ cdde6fe8-8aef-11eb-0a3c-77e28f7a2c09
 md"""
-Benchmarking this is a little tricky, because the *first* invocation will include the compilation times of both functions. And in the *second* invocation, your operating system will have stored a copy of the file (or *cached* the file) in RAM, making the file seek almost instant. To time it properly, run it once, then *change the file* to another not-recently-opened file, and run it again. So in fact, we should update our computer diagram:
+此处的基准测试有些棘手，这是因为**第一次**调用会包含两函数的编译时间。而在**第二次**调用时，操作系统将会在 RAM 存储（或**缓存**）一份文件的副本，从而实现立即请求文件。为正确计时，要先运行一次，然后**改为**运行另一个最近未打开过的文件。因此，事实上应该更新一下我们的计算机体系图：
 
-$$[CPU] ↔ [RAM] ↔ [DISK CACHE] ↔ [DISK]$$
+$$[CPU] ↔ [RAM] ↔ [硬盘缓存] ↔ [硬盘]$$
 
-On my computer, finding a single byte in a file (including opening and closing the file) takes about 500 µs, and accessing 1,000,000 integers from memory takes 200 milliseconds. So RAM latency is on the order of 2,500 times lower than disk's. Therefore, repeated access to files *must* be avoided in high performance computing.
+在我的电脑上，访问文件的一个字节（包括打开和关闭文件）要花费 500 µs，而访问内存中的 1,000,000 个整数花费 200 毫秒。所以硬盘延迟大约是 RAM 延迟的 2500 倍。因此，高性能计算**必须**避免重复访问文件。
 
-Only a few years back, SSDs were uncommon and HDD throughput was lower than today. Therefore, old texts will often warn people not to have your program depend on the disk at all for high throughput. That advice is mostly outdated today, as most programs are incapable of bottlenecking at the throughput of even cheap, modern SSDs of 1 GB/s. The advice today still stands only for programs that need *frequent* individual reads/writes to disk, where the high *latency* accumulates. In these situations, you should indeed keep your data in RAM.
+几年前， SSD 还不常见，并且 HDD 的吞吐量也要比今天小。因此，旧文本通常会警告人们，由于高吞吐量成本，一点也不要让你的程序依赖硬盘。但此建议在今天已经过时了，因为大多数程序都不能达到低价且现代的 SSD 的 1 GB/s 吞吐量瓶颈。此建议在今天只仍适用于那些**频繁**进行硬盘读写的程序，这会积累出高**延迟**。在这些情况下，你确实应该将数据保存在RAM 中。
 
-The worst case for performance is if you need to read/write a large file in tiny chunks, for example one single byte at a time. In these situations, great speed improvements can be found by *buffering* the file. When  buffering, you read in larger chunks, the *buffer*, to memory, and when you want to read from the file, you check if it's in the buffer. If not, read another large chunk into your buffer from the file. This approach minimizes disk latency. Both your operating system and your programming language will make use of caches, however, sometimes [it is necessary to manually buffer your files](https://github.com/JuliaLang/julia/issues/34195).
+最差性能的情形是你需要每次读取某个大文件的一小块，例如每次读取单个字节。在这些情形中，可以通过**缓冲（buffering）**文件获得较大的速度提升。在做**缓存**时，你先读取较大的文件块（即缓冲区）到内存中， 然后当想要从文件中读取内容时，先检查它是否在缓冲区。如果不在，再次从文件读取另一大数据块到缓冲区。这种方法可将硬盘延迟降到最低。无论操作系统还是编程语言都会自动利用缓存，然而有时[手动缓存文件也是必要的](https://github.com/JuliaLang/julia/issues/34195)。
 
 """
 
