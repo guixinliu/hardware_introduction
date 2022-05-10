@@ -126,26 +126,40 @@ $$[CPU] ↔ [RAM] ↔ [硬盘缓存] ↔ [硬盘]$$
 
 # ╔═╡ f58d428c-8aef-11eb-3127-89d729e23823
 md"""
-## Avoid cache misses
-The RAM is faster than the disk, and the CPU in turn is faster than RAM. A CPU ticks like a clock, with a speed of about 3 GHz, i.e. 3 billion ticks per second. One "tick" of this clock is called a *clock cycle*. While this is a simplification, you may imagine that every cycle, the CPU executes a single, simple command called a *CPU instruction* which does one operation on a small piece of data. The clock speed then can serve as a reference for other timings in a computer. It is worth realizing just how quick a clock cycle is: In one cycle, a photon will travel only around 10 cm. In fact, modern CPUs are so fast that a significant constraint on their physical layout is that one must take into account the time needed for electricity to move through the wires inside them, so called wire delays.
+## 避免缓存未命中
+RAM 比内存快，而 CPU 又比 RAM 快。CPU滴答类似于时钟，速度约为 3 GHz，即每秒滴答30亿次。
+CPU 时钟的一次**滴答**被称为**时钟周期**。
+虽然这做了简化，但是你可以想象，在每个周期内，CPU都会执行一条简单的**指令**，该指令执行一次对小块数据的操作。
+时钟速度可以作为计算机中其他计时器的参考。
+了解时钟周期到底有多快是很值得的：光在一个时钟周期内只前进 10 cm。
+事实上，现代 CPU 如此之快，以至于一个约束物理布局的重要因素是必须考虑电子在内部线路传输所花的时间，这被称为线路延迟。
 
-On this scale, reading from RAM takes around 500 clock cycles. Similarly to how the high latency of disks can be mitigated by copying data to the faster RAM, data from RAM is copied to a smaller memory chip physically on the CPU, called a *cache*. The cache is faster because it is physically on the CPU chip (reducing wire delays), and because it uses a faster type of storage, static RAM, instead of the slower (but cheaper to manufacture) dynamic RAM which is what the main RAM is made of. Because the cache must be placed on the CPU, limiting its size, and because it is more expensive to produce, a typical CPU cache only contains around $10^8$ bits, around 1000 times less than RAM. There are actually multiple layers of CPU cache, but here we simplify it and just refer to "the cache" as one single thing:
+在该尺度上，从 RAM 中读取数据需要花费 500 个时钟周期。
+通过将数据拷贝到 RAM 可以减缓硬盘延迟。与之类似，RAM 上的数据也可以拷贝到 CPU 芯片上的一小块内存，称作**缓存（cache）**。
+缓存更快的原因是，它物理上位于CPU芯片（减少线路延迟），同时它使用一类更快的存储方式，静态RAM，而不是主流 RAM 所使用的动态 RAM方案。
+因为缓存必须位于 CPU 上所带来的尺寸限制，以及由于更加昂贵的生产成本，所以经典 CPU 缓存大约仅包含  $10^8$ 比特， 这仅是 RAM 容量的 1/1000。
+实际上，CPU 存在多级缓存，但此处仅简化为一级 **缓存** ： 
 
-$$[CPU] ↔ [CPU CACHE] ↔ [RAM] ↔ [DISK CACHE] ↔ [DISK]$$
+$$[CPU] ↔ [CPU 缓存] ↔ [RAM] ↔ [硬盘缓存] ↔ [硬盘]$$
 
-When the CPU requests a piece of data from the RAM, say a single byte, it will first check if the memory is already in cache. If so, it will read it from there. This is much faster, usually just one or a few clock cycles, than access to RAM. If not, we have a *cache miss*, where your program will stall for around 100 nanoseconds while your computer copies data from RAM into the cache.
+当 CPU 从 RAM 请求一段数据时，比如一个字节，会首先检查数据所处的内存是否已经在 CPU 缓存中。
+如果是，那么将从 CPU 缓存读取。这相比从 RAM 访问更快，通常仅需要几个时钟周期。
+如果否，那么将得到**缓存未命中**，你的程序会等待约 100 ns 直到计算机将数据从 RAM 拷贝到 CPU 缓存。
 
-It is not possible, except in very low-level languages, to manually manage the CPU cache. Instead, you must make sure to use your cache effectively.
+除了非常低层级的语言外，手动管理 CPU 缓存是不可能的。相反地，您必须确保有效使用缓存。
 
-First, you strive to use as little memory as possible. With less memory, it is more likely that your data will be in cache when the CPU needs it. Remember, a CPU can do approximately 500 small operations in the time wasted by a single cache miss.
+首先，你争取使用尽可能小的内存。使用的内存越小，当 CPU 需要数据时，它就越有可能在缓存上。 
+请记住，在一次缓存未命中所浪费的时间内，CPU 可以执行约 500 次小操作。
 
-Effective use of the cache comes down to *locality*, temporal and spacial locality:
-* By *temporal locality*, I mean that data you recently accessed likely resides in cache already. Therefore, if you must access a piece of memory multiple times, make sure you do it close together in time.
-* By *spacial locality*, I mean that you should access data from memory addresses close to each other. Your CPU does not copy *just* the requested bytes to cache. Instead, your CPU will always copy data in larger chunks called *cache lines* (usually 512 consecutive bits, depending on the CPU model).
+缓存的有效使用可以总结为**局域性**，时间和空间局域性：
+* **时间局域性**，最近可能访问的数据都应该在缓存中。因此，如果需要多次访问一小块内存，请确保在紧挨着的时间内执行。
+* **空间局域性**，数据的访问地址应该彼此接近。CPU不会**仅仅**把请求的字节拷贝到内存中。
+相反地，CPU会以被称作**缓存线（cache line）**的块尺寸拷贝数据（通常是 512个连续比特，具体取决于 CPU 型号）。
 
-To illustrate this, let's compare the performance of the `random_access` function above when it's run on a short (8 KiB) vector, compared to a long (16 MiB) one. The first one is small enough that after just a few accessions, all the data has been copied to cache. The second is so large that new indexing causes cache misses most of the time. 
+为了说明上述差别，让我们比较两种情况下 `random_access` 函数的性能：第一种访问 8 KiB 大小的短向量，第二种访问 16 MiB 大小的长向量。
+前者中的向量足够小，因此当几次访问过后数据就都被拷贝到缓存上。后者中的向量如此之大，以至于新的索引大多会触发缓存未命中。
 
-Notice the large discrepancy in time spent - a difference of around 70x.
+请注意所花时间的巨大差别——大约是70倍。
 """
 
 # ╔═╡ b73605ca-8ee4-11eb-1a0d-bb6678de91c6
@@ -157,35 +171,38 @@ end
 
 # ╔═╡ c6da4248-8c19-11eb-1c16-093695add9a9
 md"""
-We can play around with the function `random_access` from before. What happens if, instead of accessing the array randomly, we access it *in the worst possible order*?
+对于之前的 `random_access` 函数，如果我们不是随机访问数组，而是以最糟糕的情况访问，会发生些什么呢？
 
-For example, we could use the following function:
+例如，我们可以使用如下的函数：
 """
 
 # ╔═╡ d4c67b82-8c1a-11eb-302f-b79c86412ce5
 md"""
-`linear_access` does nearly the same computation as `random_access`, but accesses every 15th element. An `UInt` in Julia is 8 bytes (64 bits), so a step size of 15 means there are $15 * 64 = 960$ bits between each element; larger than the 64 byte cache line. That means *every single* access will cause a cache miss - in contrast to `random_access` with a large vector, where only *most* accesses forces cache misses.
+`linear_access` 进行与 `random_access` 相同的操作，但每次只访问第 15 个元素。
+Julia 中 `UInt` 类型的长度为 8 字节（64比特），所以步长为 15 表示每两次访问的元素间的距离为 $15 * 8 = 120$ 字节，这大于了 64 字节的缓存线。 
+这意味着每次访问都会触发缓存未命中—— 这与访问大向量的 `random_access` 函数不同，其也只在多数情况下触发缓存未命中。
 """
 
 # ╔═╡ 0f2ac53c-8c1b-11eb-3841-27f4ea1e9617
 md"""
-Surprise! The linear access pattern is more than 20 times faster! How can that be?
+令人惊讶的是，线性访问模式要比  `random_access` 快上 20 倍！这是如何办到的呢？
 
-Next to the cache of the CPU lies a small circuit called the *prefetcher*. This electronic circuit collects data on which memory is being accessed by the CPU, and looks for patterns. When it detects a pattern, it will *prefetch* whatever data it predicts will soon be accessed, so that it already resides in cache when the CPU requests the data.
+CPU 缓存旁边有一个叫做**预取器（prefetcher）**的小型电路。这个电路会收集CPU所访问的内存上的数据，并寻找特殊模式。当定位到这些模式时，它会**预取**那些根据预测将会在不久后访问的数据。因此，当 CPU 向内存请求数据时，数据其实已经保存在缓存中了。
 
-Our function `linear_access`, depite having worse *cache usage* than *random_access*, fetched the data in a completely predictable pattern, which allowed the prefetcher to do its job.
+我们的 `linear_access` 函数，尽管在拥有比 *`random_access`* 更坏的缓存使用情况，但是它的访问模式可预测，这使得预取器能够发挥作用。
 
-In summary, we have seen that
-* A *cache miss* incurs a penalty equivalent to roughly 500 CPU operations, so is absolutely critical for performance to avoid these
-* To reduce cache misses:
-  - Use smaller data so it more easily fits in cache
-  - Access data in a predicatable, regular pattern to allow the prefetcher to do its job
-  - Access data close together in memory instead of far apart
-  - When accessing data close together in memory, do so close together in time, so when it's accessed the second time, it's still in cache.
+综上，我们已经知道：
+* 一次**缓存未命中**会带来大约 500 次 CPU 操作的性能损失，因此避免它们是至关重要的。
+* 减少缓存未命中的措施有：
+  - 使用更小的数据块，以便易于向缓存拷贝；
+  - 以可预测的、规律的模式访问数据，以便于预取器发挥作用；
+  - 访问的数据应该紧靠在一起，而不是相互远离；
+  - 访问邻近数据的时间也应该相近，因为在这种情况下，当第二次访问时，数据仍然位于缓存。
 
-Cache usage has implications for your data structures. Hash tables such as `Dict`s and `Set`s are inherently cache inefficient and almost always cause cache misses, whereas arrays don't. Hence, while many operations of hash tables are $O(1)$ (i.e. they complete in constant time), their cost per operation is high.
+缓存用法会你的影响数据结构。哈希表，例如 `Dict` 和 `Set ，都会存在缓存效率低和总是触发缓存未命中的固有问题，但数组并不存在这些问题。
+因此，虽然哈希表的许多操作都是$O(1)$ 的复杂度（即在常数时间内完成），但是每次操作成本依然很高。
 
-Many of the optimizations in this document indirectly impact cache use, so this is important to have in mind.
+本教程中的许多优化都会间接影响缓存使用，因此记住这一点很重要。
 """
 
 # ╔═╡ 12f1228a-8af0-11eb-0449-230ae20bfa7a
