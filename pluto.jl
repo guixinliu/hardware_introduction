@@ -163,13 +163,6 @@ $$[CPU] ↔ [CPU 缓存] ↔ [RAM] ↔ [硬盘缓存] ↔ [硬盘]$$
 请注意所花时间的巨大差别——大约是70倍。
 """
 
-# ╔═╡ b73605ca-8ee4-11eb-1a0d-bb6678de91c6
-begin
-    @btime random_access($(rand(UInt, 1024)), 2^20) seconds=1
-    @btime random_access($(rand(UInt, 2^24)), 2^20) seconds=1
-    nothing
-end
-
 # ╔═╡ c6da4248-8c19-11eb-1c16-093695add9a9
 md"""
 对于之前的 `random_access` 函数，如果我们不是随机访问数组，而是以最糟糕的情况访问，会发生些什么呢？
@@ -209,23 +202,30 @@ CPU 缓存旁边有一个叫做**预取器（prefetcher）**的小型电路。�
 
 # ╔═╡ 12f1228a-8af0-11eb-0449-230ae20bfa7a
 md"""
-## Keep your data aligned to memory
-As just mentioned, your CPU will move entire cache lines of usually 512 consecutive bits (64 bytes) to and from main RAM to cache at a time. Your entire main memory is segmented into cache lines. For example, memory addresses 0 to 63 is one cache line, addresses 64 to 127 is the next, 128 to 191 the next, et cetera. Your CPU may only request one of these cache lines from memory, and not e.g. the 64 bytes from address 30 to 93.
+## 让数据在内存中保持对齐
+如上面所说，CPU 会一次性把 512 连续比特（即 64 字节）的“缓存线”数据从 RAM 移动到 CPU 缓存中。那么，主内存整体就会被相对分成一个又以一个缓存线。
+例如，内存地址 0 到 63 对应一条缓存线，紧接着下一条是内存地址 64 到 127，再接着是内存地址 128 到 191 等等。
+CPU 只会从内存中请求某条缓存线，而不是内存地址 30 到 93 所对应的 64 字节。
 
-This means that some data structures can straddle the boundaries between cache lines. If I request a 64-bit (8 byte) integer at adress 60, the CPU must first generate two memory requests from the single requested memory address (namely to get cache lines 0-63 and 64-127), and then retrieve the integer from both cache lines, wasting time.
+这意味着一些数据结构会穿过缓存线的边界。如果我想要访问一个位于地址 60 的 64 位（8 字节）整数，那么 CPU 必须首先根据单次请求地址生成两次内存请求（即缓存线 0-63 和 64-127），然后从两条缓存线中检索该整数，这显然会浪费时间。
 
-The time wasted can be significant. In a situation where in-cache memory access proves the bottleneck, the slowdown can approach 2x. In the following example, I use a pointer to repeatedly access an array at a given offset from a cache line boundary. If the offset is in the range `0:56`, the integers all fit within one single cache line, and the function is fast. If the offset is in `57:63` all integers will straddle cache lines.
+浪费的时间可能会很显著。在证明缓存访问是瓶颈的情况下，相较于不存在对齐问题的情况，程序性能会下降 1/2。
+在接下来的例子中，我将使用指针在缓存线边界的给定偏移处重复访问数组。
+如果偏移位于范围 `0:56`，那么所有的整数都将位于一条缓存线上，函数运行起来也快。
+如果偏移位于范围 `57:63`，那么将会有整数穿过缓存线。
 """
 
 # ╔═╡ 3a1efd5a-8af0-11eb-21a2-d1011f16555c
-md"The consequences of unaligned memory access are very CPU-dependent. On my current CPU, I see a ~15% performance decrease. On my old computer where I originally wrote this notebook, the penalty was around 100%. Old processors can do [even worse things](https://www.kernel.org/doc/Documentation/unaligned-memory-access.txt) - incredibly, the CPU inside the Game Boy Advance from 2001 would _silently perform a different read!_ 😱
+md"未对齐内存访问的后果依 CPU 型号而定。在我现在的 CPU 上，会存在约 15% 的性能下降。
+ 在我最初写这本教程的旧电脑上，性能下降接近百分百。
+旧的处理器甚至会出现[更差的情况](https://www.kernel.org/doc/Documentation/unaligned-memory-access.txt) —— 难以置信的是，2001 年 Game Boy Advance 的 CPU 竟然会**静默执行不同的读取！** 😱
 
-Fortunately, the compiler does a few tricks to make it less likely that you will access misaligned data. First, Julia (and other compiled languages) always places new objects in memory at the boundaries of cache lines. When an object is placed right at the boundary, we say that it is *aligned*. Julia also aligns the beginning of larger arrays:"
+幸运的是，一些编译器端的技巧能够降低访问未对齐数据的可能性。首先，Julia（以及其他编译型语言）通常会把新对象放在缓存线内存的边界处。当对象正好放在边界时，我们认为数据是对齐的。Julia 也会把大型数组的开头对齐："
 
 # ╔═╡ 5b10a2b6-8af0-11eb-3fe7-4b78b4c22550
-md"Note that if the beginning of an array is aligned, then it's not possible for 1-, 2-, 4-, or 8-byte objects to straddle cache line boundaries, and everything will be aligned.
+md"如果数组开头是对齐的，那么 1-, 2-, 4-, 或者 8 字节的对象都不可能穿过缓存线的边界。并且一切都是对齐的。
 
-It would still be possible for an e.g. 7-byte object to be misaligned in an array. In an array of 7-byte objects, the 10th object would be placed at byte offset $7 \times (10-1) = 63$, and the object would straddle the cache line. However, the compiler usually does not allow struct with a nonstandard size for this reason. If we define a 7-byte struct:"
+但是若数组中有 7 字节对象，仍然可能存在对齐不了的情况。在一个由 7 字节对象组成的数组中，第 10 个对象的偏移地址是 $7 \times (10-1) = 63$ 字节，这将会产生穿过缓存线的情况。然而，编译器通常因此不允许非标准内存大小的结构体。如果定义一个 7 字节结构体："
 
 # ╔═╡ 6061dc94-8af0-11eb-215a-4f3af731774e
 struct AlignmentTest
@@ -235,7 +235,7 @@ struct AlignmentTest
 end;
 
 # ╔═╡ 624eae74-8af0-11eb-025b-8b68dc55f31e
-md"Then we can use Julia's introspection to get the relative position of each of the three integers in an `AlignmentTest` object in memory:"
+md"然后可以使用 Julia 的内省函数获得 `AlignmentTest` 中三个对象在内存中的相对位置："
 
 # ╔═╡ d4c8c38c-8ee6-11eb-0b49-33fbfbd214f3
 let
@@ -250,22 +250,26 @@ end
 
 # ╔═╡ 7b979410-8af0-11eb-299c-af0a5d740c24
 md"""
-We can see that, despite an `AlignmentTest` only having 4 + 2 + 1 = 7 bytes of actual data, it takes up 8 bytes of memory, and accessing an `AlignmentTest` object from an array will always be aligned.
+我们可以看到，尽管 `AlignmentTest` 只有 4 + 2 + 1 = 7 字节的真实数据，但是却分配了 8 字节的内存。
+这样的话，访问数组中的 `AlignmentTest` 对象时，内存仍然是对齐的。
 
-As a coder, there are only a few situations where you can face alignment issues. I can come up with two:
+作为一名程序员，其实只有极少数情况会遇到内存对齐问题。这里提供两个例子：
 
-1. If you manually create an object with a strange size, e.g. by accessing a dense integer array with pointers. This can save memory, but will waste time. [My implementation of a Cuckoo filter](https://github.com/jakobnissen/Probably.jl) does this to save space.
-2. During matrix operations. If you have a matrix the columns are sometimes unaligned because it is stored densely in memory. E.g. in a 15x15 matrix of `Float32`s, only the first column is aligned, all the others are not. This can have serious effects when doing matrix operations: [I've seen benchmarks](https://juliasimd.github.io/LoopVectorization.jl/latest/examples/matrix_vector_ops/) where an 80x80 matrix/vector multiplication is 2x faster than a 79x79 one due to alignment issues.
+1. 若创建的对象具有奇怪的尺寸，例如使用指针访问稠密的整数数组。这种操作虽然可以节约内存，但是会浪费时间。我实现的[Cuckoo filter](https://github.com/jakobnissen/Probably.jl) 就使用了这种方式节约空间。 
+2. 矩阵操作的过程。因为数组元素在内存中紧靠着存储，所以有时数组的列会是未对齐的。例如，在一个 15x15 的 `Float32` 矩阵中，仅仅只有第一列是对齐的，其他列都存在未对齐问题。这会对矩阵操作造成严重的后果：[在链接里的基准测试中](https://juliasimd.github.io/LoopVectorization.jl/latest/examples/matrix_vector_ops/)，由于对齐问题，80x80 矩阵/向量的乘法会比 79x79 矩阵/向量的乘法快上两倍。
 """
 
 # ╔═╡ 8802ff60-8af0-11eb-21ac-b9fdbeac7c24
 md"""
-## Digression: Assembly code
-To run, any program must be translated, or *compiled* to CPU instructions. The CPU instructions are what is actually running on your computer, as opposed to the code written in your programming language, which is merely a *description* of the program. CPU instructions are usually presented to human beings in *assembly*. Assembly is a programming language which has a one-to-one correspondance with CPU instructions.
+## 题外话：汇编代码
+任何程序想要运行，都需要先翻译或者说**编译**为 CPU 指令。
+使用编程语言写下的代码仅仅是程序的一种**描述**，与之相反的是，CPU 指令是真真切切运行在电脑上的。
+人们通常用 **汇编** 语言描述 CPU 指令。也就是说，汇编语言的语句是与 CPU 指令一一对应的。
 
-Viewing assembly code will be useful to understand some of the following sections which pertain to CPU instructions.
+查看汇编代码将有助于理解下文中那些关于 CPU 指令的章节。
 
-In Julia, we can easily inspect the compiled assembly code using the `code_native` function or the equivalent `@code_native` macro. We can do this for a simple function:
+在 Julia 中，可以使用  `code_native` 函数或者 `@code_native` 宏方便地查看编译后的汇编代码。
+我们将将其应用到一个简单的函数上：
 """
 
 # ╔═╡ a36582d4-8af0-11eb-2b5a-e577c5ed07e2
@@ -283,13 +287,21 @@ end;
 
 # ╔═╡ ae9ee028-8af0-11eb-10c0-6f2db3ab8025
 md"""
-Let's break it down:
+让我们来分析一下：
 
-The lines beginning with `;` are comments, and explain which section of the code the following instructions come from. They show the nested series of function calls, and where in the source code they are. You can see that `eachindex`, calls `axes1`, which calls `axes`, which calls `size`. Under the comment line containing the `size` call, we see the first CPU instruction. The instruction name is on the far left, `movq`. The name is composed of two parts, `mov`, the kind of instruction (to move content to or from a register), and a suffix `q`, short for "quad", which means 64-bit integer. There are the following suffixes:  `b` (byte, 8 bit), `w` (word, 16 bit), `l`, (long, 32 bit) and `q` (quad, 64 bit).
+以 `;` 开头的行是注释，这些行会解释说明以下代码来自哪些部分。
+它们会展示嵌套的函数调用，以及函数在源代码中的位置。
+你可以看到，`eachindex` 调用了 `axes1`，`axes1` 又调用了 `axes`，然后 `axes` 又调用了 `size`。
+在 `size` 那行注释下面，我们看到了第一条 CPU 指令。
+指令名位于最左侧，即 `movq`。
+名称由两部分组成，第一部分为 `mov`，它是指令的类型（即将数据移出或移入寄存器）；第二部分是后缀 `q`，这是 "quad" 的缩写，对应了 64-bit 整数。
+全部的后缀如下：`b` (byte, 8 位), `w` (word, 16 位), `l`, (long, 32 位) 和 `q` (quad, 64 位)。
 
-The next two columns in the instruction, `24(%rdi)` and `%rax` are the arguments to `movq`. These are the names of the registers (we will return to registers later) where the data to operate on are stored.
+指令中接着的两列，`24(%rdi)` 和 `%rax` 是 `movq` 的参数。
+它们都是存储待操作数据的寄存器的名字。后文将会详细讨论寄存器。
 
-You can also see (in the larger display of assembly code) that the code is segmented into sections beginning with a name starting with "L", for example, when I ran it, there's a section `L32`. These sections are jumped between using if-statements, or *branches*. Here, section `L32` marks the actual loop. You can see the following two instructions in the `L32` section:
+查看大程序的汇编代码可以发现，汇编代码被分成了不同的节，并且这些节的命名都以“L”开头。
+例如，当运行上面的函数时，我们会看到 `L32` 节。这些节在 if 语句或者**代码分支**间跳转。这里的 `L32` 节对应了循环操作。你可以在 `L32` 节看到如下两条指令：
 
 ```
 ; ││┌ @ promotion.jl:401 within `=='
@@ -298,7 +310,9 @@ You can also see (in the larger display of assembly code) that the code is segme
      jne     L32
 ```
 
-The first instruction `cmpq` (compare quad) compares the data in registry `rdi`, which hold the data for the number of iterations left (plus one), with the number 1, and sets certain flags (wires) in the CPU based on the result. The next instruction `jne` (jump if not equal) makes a jump if the "equal" flag is not set in the CPU, which happens if there is one or more iterations left. You can see it jumps to `L32`, meaning this section repeat.
+第一条指令 `cmpq`（compare quad） 会将寄存器 `rdi` 中的数据与数字 1 进行比较，然后根据结果在 CPU 中设定一些 flag。
+其中，寄存器 `rdi` 中的数据对应了剩余的迭代次数（加 1）。
+下一条指令 `jne`（jump if not equal， 如果不等则跳转）会在 CPU 未设置 "equal" flag 时发生跳转。即当还有一次或多次迭代未执行时，程序发生跳转。这条指令会跳转到 'L32' 节，这意味着会重复执行该部分。
 """
 
 # ╔═╡ b73b5eaa-8af0-11eb-191f-cd15de19bc38
@@ -649,6 +663,13 @@ let
     nothing
 end
 
+# ╔═╡ b73605ca-8ee4-11eb-1a0d-bb6678de91c6
+begin
+    @btime random_access($(rand(UInt, 1024)), 2^20) seconds=1
+    @btime random_access($(rand(UInt, 2^24)), 2^20) seconds=1
+    nothing
+end
+
 # ╔═╡ ffca4c72-8aef-11eb-07ac-6d5c58715a71
 function linear_access(data::Vector{UInt}, N::Integer)
     n = rand(UInt)
@@ -861,9 +882,6 @@ Consider the assembly of this function:"
 
 # ╔═╡ 36b723fc-8ee9-11eb-1b92-451b992acc0c
 f() = error();
-
-# ╔═╡ 37cd1f1c-8ee9-11eb-015c-ade9efc27708
-@code_native f()
 
 # ╔═╡ 8af63980-8af2-11eb-3028-83a935bac0db
 md"""
@@ -1341,6 +1359,9 @@ begin
         return M
     end
 end;
+
+# ╔═╡ 37cd1f1c-8ee9-11eb-015c-ade9efc27708
+@code_native f()
 
 # ╔═╡ 39a85a58-8af3-11eb-1334-6f50ed9acd31
 @time julia_single_threaded();
