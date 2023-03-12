@@ -858,10 +858,10 @@ end
 md"""
 此处观察到的时间取决于编译器是否足够聪明，从而明白第一个函数中的计算能被表示为 `popcnt` 指令，并将此函数编译为该指令。在我的电脑上，编译器不能够实现这样的推断，因此在实现相同效果的情况下，第二个函数要快100倍。 
 
-#### Call any CPU instruction
-Julia makes it possible to call CPU instructions direcly. This is not generally advised, since not all your users will have access to the same CPU with the same instructions, and so your code will crash on users working on computers of different brands.
+#### 调用任意 CPU 指令
+Julia 能够直接调用 CPU 指令。通常不建议这样做，因为不是所有的用户能够使用相同的指令来访问相同的 CPU，所以当运行在不同品牌的电脑上时代码将会崩溃。
 
-The latest CPUs contain specialized instructions for AES encryption and SHA256 hashing. If you wish to call these instructions, you can call Julia's backend compiler, LLVM, directly. In the example below, I create a function which calls the `vaesenc` (one round of AES encryption) instruction directly:
+最新的 CPU 包含 AES 加密和 SHA256 哈希的专用指令。如果你想调用这些指令，那么可以直接调用 Julia 的编译器后端 LLVM。下面的例子创建了一个直接调用 `vaesenc` （一轮AES加密）指令的函数：
 """
 
 # ╔═╡ 25a47c54-8af2-11eb-270a-5b58c3aafe6e
@@ -877,7 +877,7 @@ begin
 end;
 
 # ╔═╡ 2dc4f936-8af2-11eb-1117-9bc10e619ec6
-md"(Thanks to Kristoffer Carlsson for [the example](http://kristofferc.github.io/post/intrinsics/)). We can verify it works by checking the assembly of the function, which should contain only a single `vaesenc` instruction, as well as the `retq` (return) and the `nopw` (do nothing, used as a filler to align the CPU instructions in memory) instruction:"
+md"（感谢 Kristoffer Carlsson 提供的[例子](http://kristofferc.github.io/post/intrinsics/) ）。我们可通过检查函数的汇编码来验证它是有效的，即汇编码只包含一条 `vaesenc` 指令及 `retq` 与 `nopw` 指令（后两条指令不进行任何操作，仅用于填充以使CPU中的指令对齐）："
 
 # ╔═╡ 76a4e83c-8af2-11eb-16d7-75eaabcb21b6
 @code_native debuginfo=:none dump_module=false aesenc(
@@ -885,7 +885,7 @@ md"(Thanks to Kristoffer Carlsson for [the example](http://kristofferc.github.io
 )
 
 # ╔═╡ 797264de-8af2-11eb-0cb0-adf3fbc95c90
-md"""Algorithms which makes use of specialized instructions can be extremely fast. [In a blog post](https://mollyrocket.com/meowhash), the video game company Molly Rocket unveiled a new non-cryptographic hash function using AES instructions which reached unprecedented speeds."""
+md"""使用专用指令的算法能够非常快。[在一篇博客中](https://mollyrocket.com/meowhash)，电子游戏公司 Molly Rocket 推出了一种用于 AES 指令的新型非加密哈希函数，从而获得了前所未有的速度。"""
 
 # ╔═╡ 80179748-8af2-11eb-0910-2b825104159d
 md"## Inlining
