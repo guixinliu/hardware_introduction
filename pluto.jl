@@ -381,12 +381,12 @@ md"然而，现代编译器非常智能，常常能够在保证结果相同的�
 @code_native debuginfo=:none dump_module=false divide_slow(UInt(1))
 
 # ╔═╡ d70c56bc-8af0-11eb-1220-09e78dba26f7
-md"## Allocations and immutability
-As already mentioned, main RAM is much slower than the CPU cache. However, working in main RAM comes with an additional disadvantage: Programs are handed a bunch of RAM by the operating system (OS) to work with. Within that chunk of memory, the program itself needs to keep track of what RAM is in use by which objects. If the program didn't keep track, the creation of one object in memory could overwrite another object, causing data loss. Therefore, every creation and destruction of data in RAM requires book-keeping, that takes time.
+md"## 内存分配和不可变性
+如前文所述，主 RAM 要比 CPU 缓存慢。然而，在主 RAM 中工作还有另外的缺点：操作系统（operating system，OS）会给多个应用提供不同的RAM。在内存块中，程序自己需要追踪对象正在使用哪些RAM。若不追踪， 一个对象的分配内存就可能覆盖另一个，这则会数据丢失。因此，RAM需要花时间记录每份数据的产生和销毁。
 
-The creation of new objects in RAM is termed *allocation*, and the destruction is called *deallocation*. Really, the (de)allocation is not really *creation* or *destruction* per se, but rather the act of starting and stopping keeping track of the memory. Memory that is not kept track of will eventually be overwritten by other data. Allocation and deallocation take a significant amount of time depending on the size of objects, from a few tens of nanoseconds to a few microseconds per allocation.
+RAM 中创建新对象称为 **分配（allocation）**，对应地，销毁对象称为 **释放（deallocation）**。实际上，分配（释放）本质上并不是真的在 **创造** 或 **销毁** ，而是开始或停止追踪指定的内存。未被追踪的内存将会被其他数据覆盖。分配和释放所花费的时间取决于对象的大小，每次操作的数量级在数十 ns 到几 ms 之间。
 
-In programming languages such as Julia, Python, R and Java, deallocation is automatically done using a program called the *garbage collector* (GC). This program keeps track of which objects are rendered unreachable by the programmer, and deallocates them. For example, if you do:"
+Julia、Python、R 和 Java 等语言使用名为“垃圾回收器（garbage collector，GC）”的程序自动实现释放操作。此程序会追踪那些被程序员标记为不可访问的对象，然后释放它们。例如若这样写："
 
 # ╔═╡ dc24f5a0-8af0-11eb-0332-2bc0834d426c
 begin
@@ -395,13 +395,13 @@ begin
 end
 
 # ╔═╡ e3c136de-8af0-11eb-06f1-9393c0f95fbb
-md"Then there is no way to get the original array `[1,2,3]` back, it is unreachable. Hence it is simply wasting RAM, and doing nothing. It is *garbage*. Allocating and deallocating objects sometimes cause the GC to start its scan of all objects in memory and deallocate the unreachable ones, which causes significant lag. You can also start the garbage collector manually:"
+md"那么你将无法找回原来的数组 `[1,2,3]` ，它已经无法访问。这什么也没有做，只是在浪费 RAM。它是**垃圾**。分配和释放有时会导致 GC 开始扫描所有内存中的对象并释放无法访问的对象，而这样会带来显著的延迟。因此你也可以手动开始垃圾回收："
 
 # ╔═╡ e836dac8-8af0-11eb-1865-e3feeb011fc4
 GC.gc()
 
 # ╔═╡ ecfd04e4-8af0-11eb-0962-f548d2eabad3
-md"The following example illustrates the difference in time spent in a function that allocates a vector with the new result relative to one which simply modifies the vector, allocating nothing:"
+md"下面的例子展示了为结果分配新内存的程序和直接在原向量上更改的程序之间的用时差异："
 
 # ╔═╡ f0e24b50-8af0-11eb-1a0e-5d925f3743e0
 begin
@@ -423,15 +423,15 @@ end;
 
 # ╔═╡ 22512ab2-8af1-11eb-260b-8d6c16762547
 md"""
-On my computer, the allocating function is more than 15x slower on average. Also note the high maximum time spend on the allocating function. This is due to a few properties of the code:
-* First, the allocation itself takes time
-* Second, the allocated objects eventually have to be deallocated, also taking time
-* Third, repeated allocations triggers the GC to run, causing overhead
-* Fourth, more allocations sometimes means less efficient cache use because you are using more memory
+在我的电脑上，需要分配新内存的程序平均相比之下要慢15倍。另外，我们也需要关注函数内存分配所花费时间的最大值。这是因为代码具有以下性质：
+* 首先，分配动作本身需要花费时间；
+* 其次，已分配对象的销毁也需要花费时间；
+* 第三，重复的分配会触发垃圾回收，这又会带来额外的开销
+* 第四，越多的分配有时意味着越低效的缓存利用，因为使用了更多的内存 
 
-Note that I used the mean time instead of the median, since for this function the GC only triggers approximately every 30'th call, but it consumes 30-40 µs when it does. All this means performant code should keep allocations to a minimum.
+注意到，我使用的是时间的平均值，而不是中位数，这是因为大约每 30 次函数调用才会触发 1 次GC，每次GC花费 30-40 µs。综上，高性能代码应将内存分配保持在最低限度。
 
-The `@btime` macro, and other benchmarking tools, tell you the number of allocations. This information is given because it is assumed that any programmer who cares to benchmark their code will be interested in reducing allocations.
+我们可以使用 `@btime` 宏或者其他基准测试工具获取到内存分配的次数。提供此信息的原因是通常认为给代码做基准测试的开发者都会对减少内存分配感兴趣。
 
 #### Not all objects need to be allocated
 Inside RAM, data is kept on either the *stack* or the *heap*. The stack is a simple data structure with a beginning and end, similar to a `Vector` in Julia. The stack can only be modified by adding or subtracting elements from the end, analogous to a `Vector` with only the two mutating operations `push!` and `pop!`. These operations on the stack are very fast. When we talk about "allocations", however, we talk about data on the heap. Unlike the stack, the heap has an unlimited size (well, it has the size of your computer's RAM), and can be modified arbitrarily, deleting and accessing any objects. You can think of the stack like a `Vector`, and the heap like a `Dict`.
