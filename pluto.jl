@@ -487,30 +487,30 @@ md"
 md"我们可以验证，实际上，`data_stack` 中的数组存储着 `StackAllocated` 对象的真实数据，而 `data_heap` 保存的是指针（即内存地址）："
 
 # ╔═╡ 74a3ddb4-8af1-11eb-186e-4d80402adfcf
-md"## Registers and SIMD
-It is time yet again to update our simplified computer schematic. A CPU operates only on data present in *registers*. These are small, fixed size slots (e.g. 8 bytes in size) inside the CPU itself. A register is meant to hold one single piece of data, like an integer or a floating point number. As hinted in the section on assembly code, each instruction usually refers to one or two registers which contain the data the operation works on:
+md"## 寄存器与 SIMD
+现在我们要再次更新简化版的计算机模型。CPU 仅能操作**寄存器（registers）**中的数据。寄存器是CPU内大小固定（例如8字节）的小型数据槽（slots）。寄存器用于保存单个数据，比如一个整数或浮点数。正如汇编代码那节所示，每条指令都会引用一个或两个寄存器，其中包含了要操作的数据：
 
 $$[CPU] ↔ [REGISTERS] ↔ [CACHE] ↔ [RAM] ↔ [DISK CACHE] ↔ [DISK]$$
 
-To operate on data structures larger than one register, the data must be broken up into smaller pieces that fits inside the register. For example, when adding two 128-bit integers on my computer:"
+如果要操作大于单个寄存器的数据结构，那么数据必须被拆分成多个寄存器大小的小数据块。例如，当在我的电脑上将两个 128-bit 整数相加时："
 
 # ╔═╡ 7a88c4ba-8af1-11eb-242c-a1813a9e6741
-@code_native debuginfo=:none dump_module=false UInt128(5) + UInt128(11)
+@code_native UInt128(5) + UInt128(11)
 
 # ╔═╡ 7d3fcbd6-8af1-11eb-0441-2f88a9d59966
-md"""There is no register that can do 128-bit additions. First the lower 64 bits must be added using a `addq` instruction, fitting in a register. Then the upper bits are added with a `adcq` instruction, which adds the digits, but also uses the carry bit from the previous instruction. Finally, the results are moved 64 bits at a time using `movq` instructions.
+md"""目前没有寄存器能够直接处理 128-bit 的情况。首先，使用 `addq` 指令将低位的 64 比特加起来，存入一个寄存器。然后，使用 `adcq` 指令计算高位比特的加法，该指令不仅将数组相加，还会使用前一指令的进位比特。最后，使用 `movq` 指令一次将结果移动 64 位。
 
-The small size of the registers serves as a bottleneck for CPU throughput: It can only operate on one integer/float at a time. In order to sidestep this, modern CPUs contain specialized 256-bit registers (or 128-bit in older CPUs, or 512-bit in the brand new ones) than can hold 4 64-bit integers/floats at once, or 8 32-bit integers, etc. Confusingly, the data in such wide registers are termed "vectors." The CPU have access to instructions that can perform various CPU operations on vectors, operating on 4 64-bit integers in one instruction. This is called "single instruction, multiple data," *SIMD*, or *vectorization*. Notably, a 4x64 bit operation is *not* the same as a 256-bit operation, e.g. there is no carry-over with between the 4 64-bit integers when you add two vectors. Instead, a 256-bit vector operation is equivalent to 4 individual 64-bit operations.
+寄存器的小尺寸是 CPU 吞吐量的瓶颈之一：它一次性仅能处理 1 个整数/浮点数。为了避免这类情形，现代 CPU 包含了专用的 256 位寄存器（旧 CPU 为 128 位，最新的 CPU 为 512 位），故能同时处理 4 个 64 位整数/浮点数，或者 8 个 32 位整数/浮点数等等。令人迷惑的是，这类宽寄存器中的数据被称为“向量”。CPU 使用特定的指令对向量实现多种 CPU 操作，即一条指令操作 4 个 64 位整数。这被称为“单指令，多数据（single instruction, multiple data）”， 简称为 **SIMD**，或**向量化**。特别地， 4 个 64 位的操作并不与一个 256 位的操作相同，例如 4 个 64 位整数相加时不存在进位。与之相反，一个 256 位向量的操作等价于 4 个单独的 64 位运算。
 
-We can illustrate this with the following example:"""
+可以通过下面的例子说明这一点："""
 
 # ╔═╡ 8c2ed15a-8af1-11eb-2e96-1df34510e773
 md"""
-Here, two 8×32 bit vectors are added together in one single instruction. You can see the CPU makes use of a single `vpaddd` (vector packed add double) instruction to add 8 32-bit integers, as well as the corresponding move instruction `vmovdqu`. Note that vector CPU instructions begin with `v`.
+在此处代码中，两个 8x32 位的向量使用单条指令相加。可以看到，CPU 使用了单个 `vpaddd` （vector packed add double，矢量聚合双精度加法）指令来对 8 个 32 位整数做加法，对应的移动指令也就是 `vmovdqu`。注意到，向量化的 CPU 指令都以 `v` 开头。
 
-It's worth mentioning the interaction between SIMD and alignment: If a series of 256-bit (32-byte) SIMD loads are misaligned, then up to half the loads could cross cache line boundaries, as opposed to just 1/8th of 8-byte loads. Thus, alignment is a much more serious issue when using SIMD. Since array beginnings are always aligned, this is usually not an issue, but in cases where you are not guaranteed to start from an aligned starting point, such as with matrix operations, this may make a significant difference. In brand new CPUs with 512-bit registers, the issues is even worse as the SIMD size is the same as the cache line size, so *all* loads would be misaligned if the initial load is.
+值得一提的是，SIMD 和内存对齐的相互影响：如果一系列 256 位（ 32 字节） SIMD 加载未对齐，那么可能最多会有一半的加载将跨越缓存线边界，而不是仅为 8 字节的 1/8。因此，在使用 SIMD 时，对齐是一个相当严重的问题。由于数组的起头总是对齐的，所以这对数组通常不是问题。但是，在无法保证从对齐起点开始的情况下，例如矩阵运算，这可能会产生显著的性能差异。在包含 512 位寄存器的最新 CPU 中，问题更为严重，因为 SIMD 大小与缓存线大小相同，因此如果初始的加载存在偏移，则所有的加载都会发生偏移。
 
-SIMD vectorization of e.g. 64-bit integers may increase throughput by almost 4x, so it is of huge importance in high-performance programming. Compilers will automatically vectorize operations if they can. What can prevent this automatic vectorization?
+64 位整数的 SIMD 向量化可以将 CPU 吞吐量提高 4倍，所以此种方法在高性能编程中具有巨大的重要性。编译器会尽其所能地自动向量化操作。那什么可以阻止这种自动向量化呢？
 
 #### SIMD needs uninterrupted iteration of fixed length
 Because vectorized operations operate on multiple data at once, it is not possible to interrupt the loop at an arbitrary point. For example, if 4 64-bit integers are processed in one clock cycle, it is not possible to stop a SIMD loop after 3 integers have been processed. Suppose you had a loop like this:
