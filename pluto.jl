@@ -823,17 +823,17 @@ end
 
 # ╔═╡ 0dfc5054-8af2-11eb-098d-35f4e69ae544
 md"""
-## Specialized CPU instructions
+## 专用 CPU 指令
 
-Most code makes use of only a score of simple CPU instructions like move, add, multiply, bitshift, and, or, xor, jumps, and so on. However, CPUs in the typical modern laptop support a *lot* of CPU instructions. Usually, if an operation is used heavily in consumer laptops, CPU manufacturers will add specialized instructions to speed up these operations. Depending on the hardware implementation of the instructions, the speed gain from using these instructions can be significant.
+大多数代码只会使用一些简单的 CPU 指令，例如 move、add、multiply、bitshift、and、or、xor、jump 等等。然而，典型现代笔记本电脑中的 CPU 支持 **大量** 的 CPU 指令。通常，如果某个指令在消费者的电脑中频繁用到，那么 CPU 制造商将会添加专用的指令来加速这些操作。凭借指令的硬件层级实现，使用专用指令获得的加速效果非常显著。
 
-Julia only exposes a few specialized instructions, including:
+Julia仅支持一小部分专用指令，包括：
 
-* The number of set bits in an integer is effectively counted with the `popcnt` instruction, exposed via the `count_ones` function.
-* The `tzcnt` instructions counts the number of trailing zeros in the bits an integer, exposed via the `trailing_zeros` function
-* The order of individual bytes in a multi-byte integer can be reversed using the `bswap` instruction, exposed via the `bswap` function. This can be useful when having to deal with [endianness](https://en.wikipedia.org/wiki/Endianness).
+* 通过 `popcnt` 指令对整数中的 set bits 进行高效计数，对应的函数为 `count_ones`。
+* 通过 `tzcnt` 指令统计整数中 trailing zeros 的数目，对应的函数为 `trailing_zeros` 。
+* 通过 `bswap` 指令反转多字节整数中各字节的顺序，对应的函数为 `bswap`。此函数在处理[端序](https://en.wikipedia.org/wiki/Endianness)时很有用。
 
-The following example illustrates the performance difference between a manual implementation of the `count_ones` function, and the built-in version, which uses the `popcnt` instruction:
+下面的例子展现了手动实现的 `count_ones` 函数和使用内置版 `popcnt` 指令之间的性能差异：
 """
 
 # ╔═╡ 126300a2-8af2-11eb-00ea-e76a979aef45
@@ -856,7 +856,7 @@ end
 
 # ╔═╡ 1e7edfdc-8af2-11eb-1429-4d4220bad0f0
 md"""
-The timings you observe here will depend on whether your compiler is clever enough to realize that the computation in the first function can be expressed as a `popcnt` instruction, and thus will be compiled to that. On my computer, the compiler is not able to make that inference, and the second function achieves the same result more than 100x faster.
+此处观察到的时间取决于编译器是否足够聪明，从而明白第一个函数中的计算能被表示为 `popcnt` 指令，并将此函数编译为该指令。在我的电脑上，编译器不能够实现这样的推断，因此在实现相同效果的情况下，第二个函数要快100倍。 
 
 #### Call any CPU instruction
 Julia makes it possible to call CPU instructions direcly. This is not generally advised, since not all your users will have access to the same CPU with the same instructions, and so your code will crash on users working on computers of different brands.
