@@ -598,17 +598,17 @@ Julia 还提供了 `@simd ivdep` 宏，它进一步告诉编译器循环顺序�
 
 # ╔═╡ f5c28c92-8af1-11eb-318f-5fa059d8fd80
 md"""
-## Struct of arrays
-If we create an array containing four `AlignmentTest` objects `A`, `B`, `C` and `D`, the objects will lie end to end in the array, like this:
+## 数组结构体
+如果创造一个数组，其中包含四个 `AlignmentTest` 对象 `A`、`B`、`C` 和 `D`，对象将会在数组中首尾相接，如下所示：
 
-    Objects: |      A        |       B       |       C       |        D      |
-    Fields:  |   a   | b |c| |   a   | b |c| |   a   | b |c| |   a   | b |c| |
-    Byte:     1               9              17              25              33
+    对象:  |      A        |       B       |       C       |        D      |
+    字段:  |   a   | b |c| |   a   | b |c| |   a   | b |c| |   a   | b |c| |
+    字节:   1               9              17              25              33
 
-Note again that byte no. 8, 16, 24 and 32 are empty to preserve alignment, wasting memory.
-Now suppose you want to do an operation on all the `.a` fields of the structs. Because the `.a` fields are scattered 8 bytes apart, SIMD operations are much less efficient (loading up to 4 fields at a time) than if all the `.a` fields were stored together (where 8 fields could fit in a 256-bit register). When working with the `.a` fields only, the entire 64-byte cache lines would be read in, of which only half, or 32 bytes would be useful. Not only does this cause more cache misses, we also need instructions to pick out the half of the data from the SIMD registers we need.
+再次注意，为了保持对齐，第8、16、24 和 32 字节是空闲的，这就会浪费内存。
+现在假设要对所有结构体的 ".a" 字段执行操作。由于两 ".a" 字段相隔8字节，因此 SIMD 操作的效率（一次最多加载4个字段）远低于所有 `.a` 存储在一起的情形（8个字段刚好可以存入 256 位寄存器）。当仅使用 ".a" 字段时，我们会读取全部的 64 字节缓存线，但其中只有一半即 32 字节有用。这不仅会导致更多的缓存未命中，而且还需要用指令来从 SIMD 寄存器中提取一半的数据。
 
-The memory structure we have above is termed an "array of structs," because, well, it is an array filled with structs. Instead we can strucure our 4 objects `A` to `D` as a "struct of arrays." Conceptually, it could look like:
+上面的内存结构被称为“结构体数组”，因为它是一个由结构体组成的数组。相反，我们可以将4个对象 "A" 到 "D" 构造为 "数组结构体"。根据概念，它看起来像是：
 """
 
 # ╔═╡ fc2d2f1a-8af1-11eb-11a4-8700f94e866e
@@ -620,14 +620,14 @@ end
 
 # ╔═╡ 007cd39a-8af2-11eb-053d-f584d68f7d2f
 md"""
-With the following memory layout for each field:
+每个字段的内存布局如下：
 
-    Object: AlignmentTestVector
+    对象: AlignmentTestVector
     .a |   A   |   B   |   C   |   D   |
     .b | A | B | C | D |
     .c |A|B|C|D|
 
-Alignment is no longer a problem, no space is wasted on padding. When running through all the `a` fields, all cache lines contain full 64 bytes of relevant data, so SIMD operations do not need extra operations to pick out the relevant data:
+内存对齐不再是问题，不会浪费任何空间用于填充。当遍历操作所有 ".a" 字段时，所有缓存线包含全部 64 字节的相关数据，因此 SIMD 不需要额外的操作来提取相关数据：
 """
 
 # ╔═╡ 72fbb3ec-8ee8-11eb-3836-11092ef74e86
