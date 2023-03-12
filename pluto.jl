@@ -317,12 +317,17 @@ md"""
 
 # ╔═╡ b73b5eaa-8af0-11eb-191f-cd15de19bc38
 md"""
-#### Fast instruction, slow instruction
-Not all CPU instructions are equally fast. Below is a table of selected CPU instructions with *very rough* estimates of how many clock cycles they take to execute. You can find much more detailed tables [in this document](https://www.agner.org/optimize/instruction_tables.pdf). Here, I'll summarize the speed of instructions on modern Intel CPUs. It's very similar for all modern CPUs.
+#### 快指令与慢指令
+并不是所有的 CPU 指令都很快。下表展示了一些 CPU 指令，并粗略估计了运行它们所要消耗的时钟周期数。
+了解更多细节请查看[此文档](https://www.agner.org/optimize/instruction_tables.pdf) 。
+下文将总结现代 Intel CPU 的指令速度。现代 CPU 的指令速度都差不多。
 
-You will see that the time is given both as latency, and reciprocal throughput (that is, $1/throughput$). The reason is that CPUs contain multiple circuits for some operations that can operate in parallel. So while float multiplication has a latency of 5 clock cycles, if 10 floating point ops can be computed in parallel in 10 different circuits, it has a throughput of 2 ops/second, and so a reciprocal throughput of 0.5.
+可以看到，表中时间的衡量标准是延迟和吞吐量倒数（即，$1/吞吐量$）。
+这样做的原因是 CPU 包含有多个电路，并且这些电路可以并行地运行操作。
+因此，尽管浮点数乘法有 5 个时钟周期的延迟，但是10个浮点数操作可以在10个不同的电路并行地计算。
+此时吞吐量为 2 操作/秒，所以吞吐量倒数为 0.5。
 
-The following table measures time in clock cycles:
+下表以时钟周期为时间单位：
 
 |Instruction             |Latency|Rec. throughp.|
 |------------------------|-------|--------------|
@@ -346,9 +351,10 @@ The following table measures time in clock cycles:
 |integer division        | 50 | 40
 
 
-The `lea` instruction takes three inputs, A, B and C, where A must be 2, 4, or 8, and calculates AB + C. We'll come back to what the "vector" instructions do later.
+`lea`指令接收 3 个参数，A，B 和 C。其中 A 必须为1, 2，4 或 8，然后计算 AB + C。
+稍后会讨论 "vector" 指令干了什么。
 
-For comparison, we may also add some *very rough* estimates of other sources of delays:
+为了进行比较，一些其他延迟来源的**粗略估计**补充如下：
 
 |Delay                  |Cycles|
 |-----------------------|----|
@@ -359,8 +365,7 @@ For comparison, we may also add some *very rough* estimates of other sources of 
 """
 
 # ╔═╡ c0c757b2-8af0-11eb-38f1-3bc3ec4c43bc
-md"If you have an inner loop executing millions of times, it may pay off to inspect the generated assembly code for the loop and check if you can express the computation in terms of fast CPU instructions. For example, if you have an integer you know to be 0 or above, and you want to divide it by 8 (discarding any remainder), you can instead do a bitshift, since bitshifts are way faster than integer division:
-"
+md"如果你的内层循环需要执行上百万次，那么就要检查生成的汇编代码是否可以转化为 CPU 快指令表示，这项操作很可能是有收益的。例如，如果你有一个大于等于 0 的整数，打算用 8 除以它（忽略余数），也可以使用位偏移操作，因为位偏移操作要比整数除法快："
 
 # ╔═╡ c5472fb0-8af0-11eb-04f1-95a1f7b6b9e0
 begin
@@ -369,10 +374,10 @@ begin
 end;
 
 # ╔═╡ ce0e65d4-8af0-11eb-0c86-2105c26b62eb
-md"However, modern compilers are pretty clever, and will often figure out the optimal instructions to use in your functions to obtain the same result, by for example replacing an integer divide `idivq` instruction with a bitshift right (`shrq`) where applicable to be faster. You need to check the assembly code yourself to see:"
+md"然而，现代编译器非常智能，常常能够在保证结果相同的情况下找出函数所对应的最佳指令。例如，整除指令 `idivq`会被替换为右位移指令（`shrq`），后者在合适的时候运算更快。你需要自行查看汇编代码："
 
 # ╔═╡ d376016a-8af0-11eb-3a15-4322759143d1
-# Calling it with these keywords removes comments in the assembly code
+# Calling it with debuginfo=:none removes the comments in the assembly code
 @code_native debuginfo=:none dump_module=false divide_slow(UInt(1))
 
 # ╔═╡ d70c56bc-8af0-11eb-1220-09e78dba26f7
