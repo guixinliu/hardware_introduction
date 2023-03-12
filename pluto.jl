@@ -888,17 +888,17 @@ md"（感谢 Kristoffer Carlsson 提供的[例子](http://kristofferc.github.io/
 md"""使用专用指令的算法能够非常快。[在一篇博客中](https://mollyrocket.com/meowhash)，电子游戏公司 Molly Rocket 推出了一种用于 AES 指令的新型非加密哈希函数，从而获得了前所未有的速度。"""
 
 # ╔═╡ 80179748-8af2-11eb-0910-2b825104159d
-md"## Inlining
-Consider the assembly of this function:"
+md"## 内联（Inlining）  
+考虑此函数的汇编码："
 
 # ╔═╡ 36b723fc-8ee9-11eb-1b92-451b992acc0c
 f() = error();
 
 # ╔═╡ 8af63980-8af2-11eb-3028-83a935bac0db
 md"""
-This code contains the `callq` instruction, which calls another function. A function call comes with some overhead depending on the arguments of the function and other things. While the time spent on a function call is measured in nanoseconds, it can add up if the function called is in a tight loop.
+此段代码包含用于调用其他函数的 `callq` 指令。 函数调用会产生一些开销，其取决于函数的参数与其他内容。虽然函数调用的耗时在 ns 数量级，但是若在小循环中调用函数，时间则会累加。 
 
-However, if we show the assembly of this function:
+然而，如果我们查看如下函数的的汇编码：
 """
 
 # ╔═╡ 50ab0cf6-8ee9-11eb-3e04-af5fef7f2850
@@ -909,20 +909,20 @@ call_plus(x) = x + 1;
 
 # ╔═╡ a105bd68-8af2-11eb-31f6-3335b4fb0f08
 md"""
-The function `call_plus` calls `+`, and is compiled to a single `leaq` instruction (as well as some filler `retq` and `nopw`). But `+` is a normal Julia function, so `call_plus` is an example of one regular Julia function calling another. Why is there no `callq` instruction to call `+`?
+`call_plus` 函数调用了 `+`，并被编译为单条 `leaq` 指令（也包含 `retq` 与 `nopw`）。但是 `+` 是一般的 Julia 函数，因此 `call_plus`是一个常规 Julia 函数调用另一个函数的例子。那为什么未使用 `callq` 指令来调用 `+`？   
 
-The compiler has chosen to *inline* the function `+` into `call_plus`. That means that instead of calling `+`, it has copied the *content* of `+` directly into `call_plus`. The advantages of this is:
-* There is no overhead from the function call
-* There is no need to construct a `Tuple` to hold the arguments of the `+` function
-* Whatever computations happens in `+` is compiled together with `call_plus`, allowing the compiler to use information from one in the other and possibly simplify some calculations.
+因为，编译已经选择将 `+` 函数**内联**进 `call_plus` 函数。这表明函数不是调用`+`， 而是已经将 `+` 的**内容**直接复制进了 `call_plus`。这样做的好处有：
+* 没有函数调用产生的开销
+* 不需要构造 `Tuple` 来接收 `+` 函数的参数
+* 发生在 `+` 中的任何计算都与 `call_plus` 一起编译，这使得编译器能够结合利用两函数的信息以简化某些计算。 
 
-So why aren't *all* functions inlined then? Inlining copies code, increases the size of it and consuming RAM. Furthermore, the *CPU instructions themselves* also needs to fit into the CPU cache (although CPU instructions have their own cache) in order to be efficiently retrieved. If everything was inlined, programs would be enormous and grind to a halt. Inlining is only an improvement if the inlined function is small.
+那么为什么不将**所有**函数内联起来呢？因为，内联复制代码的操作既增加了代码的体积又消耗了内存。另外，为了能被高效地检索，**CPU 指令本身**也需能放进 CPU 缓存（尽管 CPU 指令有自己的缓存）。如果一切都是内联的，那么程序将会拥有非常庞大的体积并陷入瘫痪。仅当内联函数很小时，内联操作才会是提升。
 
-Instead, the compiler uses heuristics (rules of thumb) to determine when a function is small enough for inlining to increase performance. These heuristics are not bulletproof, so Julia provides the macros `@noinline`, which prevents inlining of small functions (useful for e.g. functions that raises errors, which must be assumed to be called rarely), and `@inline`, which does not *force* the compiler to inline, but *strongly suggests* to the compiler that it ought to inline the function.
+相反，编译器使用启发式方法（经验法则）来确定函数何时足够小，以便内联能够提高性能。这些启发式方法并非万无一失，因此 Julia 提供了 `@noinline` 宏，它能够阻止小函数的内联（例如，对于引发错误的函数很有用，必须假设不常调用）；以及 `@inline` 宏， 它不会**强制**编译器进行内联，但会**强烈地建议**编译器应该内联此函数。
 
-If code contains a time-sensitive section, for example an inner loop, it is important to look at the assembly code to verify that small functions in the loop is inlined. For example, in [this line in my kmer hashing code](https://github.com/jakobnissen/Kash.jl/blob/b9a6e71acf9651d3614f92d5d4b29ffd136bcb5c/src/kmersketch.jl#L41), overall minhashing performance drops by a factor of two if this `@inline` annotation is removed.
+如果代码包含时间敏感的部分，比如内循环，那么查看汇编码就变得非常重要，即通过汇编码验证循环中的小函数是否是内联的。例如，在[我的 kmer 哈希代码的这行](https://github.com/jakobnissen/Kash.jl/blob/b9a6e71acf9651d3614f92d5d4b29ffd136bcb5c/src/kmersketch.jl#L41) 中，若去除 `@inline` 标注，minhashing 的总体性能将会下降一半。
 
-An extreme difference between inlining and no inlining can be demonstrated thus:
+以下方式证明了内联和无内联函数版本间的极端性能差异：
 """
 
 # ╔═╡ a843a0c2-8af2-11eb-2435-17e2c36ec253
