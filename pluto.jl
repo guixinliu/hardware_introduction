@@ -433,24 +433,24 @@ md"""
 
 我们可以使用 `@btime` 宏或者其他基准测试工具获取到内存分配的次数。提供此信息的原因是通常认为给代码做基准测试的开发者都会对减少内存分配感兴趣。
 
-#### Not all objects need to be allocated
-Inside RAM, data is kept on either the *stack* or the *heap*. The stack is a simple data structure with a beginning and end, similar to a `Vector` in Julia. The stack can only be modified by adding or subtracting elements from the end, analogous to a `Vector` with only the two mutating operations `push!` and `pop!`. These operations on the stack are very fast. When we talk about "allocations", however, we talk about data on the heap. Unlike the stack, the heap has an unlimited size (well, it has the size of your computer's RAM), and can be modified arbitrarily, deleting and accessing any objects. You can think of the stack like a `Vector`, and the heap like a `Dict`.
+#### 并非需要分配所有对象
+在 RAM 中，数据通常保存在 **栈** 或 **堆** 上。栈是具有起头和结尾的简单数据结构，类似于 Julia 中的 `Vector`。栈的修改方式只能是在结尾添加或移除元素，可类比于只支持可变操作 `push!` 和 `pop!` 的 `Vector`。这些在栈上的操作非常快。然而，当我们讨论“分配”时，我们讨论的是堆上的数据。与栈不同的是，堆具有无限制的大小（实际上限是计算机 RAM 的大小），并且可以随意更改、删除和访问任何对象。你可以认为栈像 `Vector`，而堆像 `Dict`。
 
-Intuitively, it may seem obvious that all objects need to be placed in RAM, must be able to be retrieved and deleted at any time by the program, and therefore need to be allocated on the heap. And for some languages, like Python, this is true. However, this is not true in Julia and other efficient, compiled languages. Integers, for example, can often be placed on the stack.
+直观地讲，很明显我们需要将所有的对象放在 RAM 中，并且要让程序随时能够检索和删除对象，因此我们需要将对象都分配在堆上。某些语言，比如 Python，正是这样做的。然而，这不适用于 Julia 以及其他高效的编译型语言。例如，整数类型（Integer）通常放在栈上。
 
-Why do some objects need to be heap allocated, while others can be stack allocated? To be stack-allocated, the compiler needs to know for certain that:
+为什么有的对象需要分配在堆上，而有的对象又需要分配在栈上呢？对于分配在栈上的对象，编译器需要确定的是：
 
-* The object is a reasonably small size, so it fits on the stack. For technical reasons, the stack can't just be hundreds of megabytes in size.
-* The compiler can predict exactly *when* it needs to create and destroy the object so it can destroy it timely by simply popping the stack (similar to calling `pop!` on a `Vector`). This is usually the case for local variables in compiled languages.
+* 对象所占内存应适当地小，因此才能放进栈中。考虑一些技术因素，栈不能只有数百 MB 大小。  
+* 编译器应该能够准确预测对象的创建和销毁时机，因此可以通过简单的弹栈操作来及时销毁对象（类似于调用 `pop!` 函数操作 `Vector`）。编译型语言中的局部变量通常就是这类情形。
 
-Julia has even more constrains on stack-allocated objects.
-* The object should have a fixed size known at compile time.
-* The compiler must know that object never changes. The CPU is free to copy stack-allocated objects, and for immutable objects, there is no way to distinguish a copy from the original. This bears repeating: *With immutable objects, there is no way to distinguish a copy from the original*. This gives the compiler and the CPU certain freedoms when operating on it. The latter point is also why objects are immutable by default in Julia, and leads to one other performance tip: Use immutable objects wherever possible.
+Julia 语言对分配在栈上的对象有更多的限制。
+* 对象的大小固定，且能够在编译时已知。
+* 编译器必须确定对象永不改变。CPU 能够自由复制栈上分配的对象，然而对于不可变对象，我们无法区分原始对象和其副本。这需要重复一遍：**对于不可变对象，我们无法区分原始对象和其副本**。这使得编译器和 CPU 在操作对象时具有确定的自由度。这也就是为什么 Julia 中的对象默认都是不可变的，这引出了一条性能建议：尽可能使用不可变对象。
 
-What does this mean in practice? In Julia, it means if you want fast stack-allocated objects:
-* Your object must be created, used and destroyed in a fully compiled function so the compiler knows for certain when it needs to create, use and destroy the object. If the object is returned for later use (and not immediately returned to another, fully compiled function), we say that the object *escapes*, and must be allocated.
-* Your type must be limited in size. I don't know exactly how large it has to be, but 100 bytes is fine.
-* The exact memory layout of your type must be known by the compiler (it nearly always is).
+实际上这意味着什么呢？在 Julia 中，这意味着如果想要得到快速的栈分配对象，那么需要满足以下条件：
+* 对象应该由完全编译的函数创建、使用和销毁，从而让编译器能够知道创建、使用和销毁该对象的准确时机。如果对象需要返回供以后使用（而不是即刻返回到另一个完全编译的函数），这称为**逃逸**，则需要在内存中分配。
+* 必须限制类型的大小。我不知道到底应该多大，但 100 比特是可以的。
+* 编译器必须（几乎总是）知道类型的准确内存布局。
 """
 
 # ╔═╡ 2a7c1fc6-8af1-11eb-2909-554597aa2949
@@ -467,24 +467,24 @@ begin
 end
 
 # ╔═╡ 2e3304fe-8af1-11eb-0f6a-0f84d58326bf
-md"We can inspect the code needed to instantiate a `HeapAllocated` object with the code needed to instantiate a `StackAllocated` one:"
+md"我们可以分别检查初始化 `HeapAllocated` 对象和 `StackAllocated` 对象的代码："
 
 # ╔═╡ 33350038-8af1-11eb-1ff5-6d42d86491a3
 @code_native debuginfo=:none dump_module=false HeapAllocated(1)
 
 # ╔═╡ 3713a8da-8af1-11eb-2cb2-1957455227d0
-md"Notice the `callq` instruction in the `HeapAllocated` one. This instruction calls out to other functions, meaning that in fact, much more code is really needed to create a `HeapAllocated` object that what is displayed. In constrast, the `StackAllocated` really only needs a few instructions:"
+md"注意上述 `HeapAllocated` 代码中的 `callq` 指令。这条指令调用了另一函数，这实际上意味着需要更多的代码来创建如上所示的 `HeapAllocated` 对象。相反，`StackAllocated` 对象的分配只需要几条指令："
 
 # ╔═╡ 59f58f1c-8af1-11eb-2e88-997e9d4bcc48
 @code_native debuginfo=:none dump_module=false StackAllocated(1)
 
 # ╔═╡ 5c86e276-8af1-11eb-2b2e-3386e6795f37
 md"
-Because immutable objects dont need to be stored on the heap and can be copied freely, immutables are stored *inline* in arrays. This means that immutable objects can be stored directly inside the array's memory. Mutable objects have a unique identity and location on the heap. They are distinguishable from copies, so cannot be freely copied, and so arrays contain reference to the memory location on the heap where they are stored. Accessing such an object from an array then means first accessing the array to get the memory location, and then accessing the object itself using that memory location. Beside the double memory access, objects are stored less efficiently on the heap, meaning that more memory needs to be copied to CPU caches, meaning more cache misses. Hence, even when stored on the heap in an array, immutables can be stored more effectively.
+因为不可变对象不需要存储在堆上，并且可以被自由复制，所以不可变对象串联存储在数组中。这意味着不可变对象可以直接存储在数组的内存中。可变对象则需要在堆上具有唯一的标识符和存储位置。可变对象和其副本间是可分辨的，因此不能自由复制，所以数组内包含的是对其堆上存储位置的引用。从数组访问这类对象的流程是，首先访问数组获得存储位置，然后利用存储位置访问对象本身。除了两次内存访问外，在堆上存储对象也相对低效，因为需要 CPU 缓存拷贝了更多的内存，而这意味着更多的缓存未命中。因此，即使是存储在堆上的数组里，不可变对象的存储也相对更高效。
 "
 
 # ╔═╡ 6849d9ec-8af1-11eb-06d6-db49af4796bc
-md"We can verify that, indeed, the array in the `data_stack` stores the actual data of a `StackAllocated` object, whereas the `data_heap` contains pointers (i.e. memory addresses):"
+md"我们可以验证，实际上，`data_stack` 中的数组存储着 `StackAllocated` 对象的真实数据，而 `data_heap` 保存的是指针（即内存地址）："
 
 # ╔═╡ 74a3ddb4-8af1-11eb-186e-4d80402adfcf
 md"## Registers and SIMD
