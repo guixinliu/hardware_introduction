@@ -512,8 +512,8 @@ md"""
 
 64 位整数的 SIMD 向量化可以将 CPU 吞吐量提高 4倍，所以此种方法在高性能编程中具有巨大的重要性。编译器会尽其所能地自动向量化操作。那什么可以阻止这种自动向量化呢？
 
-#### SIMD needs uninterrupted iteration of fixed length
-Because vectorized operations operate on multiple data at once, it is not possible to interrupt the loop at an arbitrary point. For example, if 4 64-bit integers are processed in one clock cycle, it is not possible to stop a SIMD loop after 3 integers have been processed. Suppose you had a loop like this:
+#### SIMD 需要不中断的固定长度循环
+因为向量化操作一次处理多条数据，因此不能在任意点中断循环。例如，如果能在 1 个时钟周期内处理4 个 64 位整数，那么不可能在处理了 3 个整数后停止 SIMD 循环。假设你有如下的循环：
 
 ```julia
 for i in 1:8
@@ -524,17 +524,17 @@ for i in 1:8
 end
 ```
 
-Here, the loop could end on any iteration due to the break statement. Therefore, any SIMD instruction which loaded in multiple integers could operate on data *after* the loop is supposed to break, i.e. data which is never supposed to be read. This would be wrong behaviour, and so, the compiler cannot use SIMD instructions.
+由于存在 break 语句，此处的循环能够在任意迭代次数结束。因此，任何加载多个整数的 SIMD 指令都能处理循环中断后的数据，即永远不应被读取的数据。这是错误的行为，并且会导致编译器不能使用 SIMD 指令。
 
-A good rule of thumb is that SIMD needs:
-* A loop with a predetermined length, so it knows when to stop, and
-* A loop with no branches (i.e. if-statements) in the loop
+根据经验来看，SIMD 需要：
+* 循环长度预先指定，因此停止时机可知
+* 以及循环体内不存在分支（即 if 语句）
 
-In fact, even boundschecking, i.e. checking that you are not indexing outside the bounds of a vector, causes a branch. After all, if the code is supposed to raise a bounds error after 3 iterations, even a single SIMD operation would be wrong! To achieve SIMD vectorization then, all boundschecks must be disabled.
+实际上，甚至边界检查，即检查你的索引是否超出向量的边界，都会导致分支。毕竟，如果代码在 3 次迭代后引发越界错误，那么即使是单个 SIMD 指令都会出错！如果要实现 SIMD 向量化，那么所有的边界检查都应该被禁止掉。
 
-Fortunately, in the latest versions of Julia, the compiler has been pretty smart at figuring out when it can SIMD even when boundschecking.
+幸运的是，在最新版本的 Julia 中，编译器已经聪明到可以指出能够 SIMD 的时机，即使存在边界检查也可以。 
 
-To demonstrate the significant impact of SIMDd, we can use a function that uses an input function to break a loop. We can then compare the speed of the function when given a function that the compiler knows will never break the loop and so can SIMDd, with a function that might break the loop."""
+为了说明 SIMD 的影响，我们可以使用一个输入函来中断循环。然后比较两函数的速度，一个是可能中断循环的函数，另一个是编译器知道不存在循环中断并以SIMD方式执行的函数。"""
 
 # ╔═╡ 94182f88-8af1-11eb-207a-37083c1ead68
 begin
@@ -553,7 +553,7 @@ end;
 
 # ╔═╡ aa3931fc-8af1-11eb-2f42-f582b8e639ad
 md"""
-On my computer, the SIMD code is 10x faster than the non-SIMD code. SIMD alone accounts for only about 4x improvements (since we moved from 64-bits per iteration to 256 bits per iteration). The rest of the gain comes from not spending time checking the bounds and from automatic loop unrolling (explained later), which is also made possible by the `@inbounds` annotation.
+在我的电脑上， SIMD 版本的代码要比非 SIMD 版本的代码快上 10 倍。单凭 SIMD 能提供约 4 倍的性能提升（因为我们将每次迭代 64 位提升到了每次迭代 256 位）。其余的提升来自于未耗时做边界检查和自动循环展开（后续将说明），这都是通过 `@inbounds` 实现的。
 
 #### SIMD needs a loop where loop order doesn't matter
 SIMD can change the order in which elements in an array is processed. If the result of any iteration depends on any previous iteration such that the elements can't be re-ordered, the compiler will usually not SIMD-vectorize. Often when a loop won't auto-vectorize, it's due to subtleties in which data moves around in registers means that there will be some hidden memory dependency between elements in an array.
