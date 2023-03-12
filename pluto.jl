@@ -555,18 +555,18 @@ end;
 md"""
 在我的电脑上， SIMD 版本的代码要比非 SIMD 版本的代码快上 10 倍。单凭 SIMD 能提供约 4 倍的性能提升（因为我们将每次迭代 64 位提升到了每次迭代 256 位）。其余的提升来自于未耗时做边界检查和自动循环展开（后续将说明），这都是通过 `@inbounds` 实现的。
 
-#### SIMD needs a loop where loop order doesn't matter
-SIMD can change the order in which elements in an array is processed. If the result of any iteration depends on any previous iteration such that the elements can't be re-ordered, the compiler will usually not SIMD-vectorize. Often when a loop won't auto-vectorize, it's due to subtleties in which data moves around in registers means that there will be some hidden memory dependency between elements in an array.
+#### SIMD 需要顺序无关的循环
+SIMD 能够改变数组元素的处理顺序。如果任何的迭代依赖于任何的先前迭代，那么元素不能够被重新排序，编译器通常也就不会进行 SIMD 向量化。通常，不能对循环自动向量化是由于一些数据在寄存器中移动的细微差别，即数组元素间存在某些隐藏的内存依赖关系。
 
-Imagine we want to sum some 64-bit integers in an array using SIMD. For simplicity, let's say the array has 8 elements, `A`, `B`, `C` ... `H`. In an ordinary non-SIMD loop, the additions would be done like so:
+想象需要使用 SIMD 对数组中的一些 64 位整数求和。简单起见，我们使数组只有 8 个元素，`A`，`B`，`C` ... `H`。在通常的非 SIMD 循环中，加法将像下面这样完成：
 
 $$(((((((A + B) + C) + D) + E) + F) + G) + H)$$
 
-Whereas when loading the integers using SIMD, four 64-bit integers would be loaded into one vector `<A, B, C, D>`, and the other four into another `<E, F, G, H>`. The two vectors would be added: `<A+E, B+F, C+G, D+H>`. After the loop, the four integers in the resulting vector would be added. So the overall order would be:
+而当使用 SIMD 加载整数时，四个 64 位整数将被加载到一个向量 `<A, B, C, D>`，另外四个整数加载到另一个向量 `<E, F, G, H>`。然后将两个向量相加：`<A+E, B+F, C+G, D+H>`。循环完成后，将结果向量中的四个整数加起来。所以，总的顺序如下：
 
 $$((((A + E) + (B + F)) + (C + G)) + (D + H))$$
 
-Perhaps surprisingly, addition of floating point numbers can give different results depending on the order (i.e. float addition is not associative):
+也许令人惊讶的是，浮点数加法可以根据顺序给出不同的结果（即浮点数加法不满足结合律）：
 """
 
 # ╔═╡ c01bf4b6-8af1-11eb-2f17-bfe0c93d48f9
@@ -576,10 +576,10 @@ begin
 end
 
 # ╔═╡ c80e05ba-8af1-11eb-20fc-235b45f2eb4b
-md"for this reason, float addition will not auto-vectorize:"
+md"因此，不会对浮点数加法自动向量化:"
 
 # ╔═╡ e3931226-8af1-11eb-0da5-fb3c1c22d12e
-md"However, high-performance programming languages usually provide a command to tell the compiler it's alright to re-order the loop, even for non-associative loops. In Julia, this command is the `@simd` macro:"
+md"然而，高性能编程语言通常会提供一条命令来告诉编译器，即使对于不满足交换律的循环也可以重排循环。在 Julia 中， 这条命令是 `@simd` 宏："
 
 # ╔═╡ e793e300-8af1-11eb-2c89-e7bc1be249f0
 function sum_simd(x::Vector)
@@ -593,7 +593,7 @@ end;
 
 # ╔═╡ f0a4cb58-8af1-11eb-054c-03192285b5e2
 md"""
-Julia also provides the macro `@simd ivdep` which further tells the compiler that there are no memory-dependencies in the loop order. However, I *strongly discourage* the use of this macro, unless you *really* know what you're doing. In general, the compiler knows best when a loop has memory dependencies, and misuse of `@simd ivdep` can very easily lead to bugs that are hard to detect.
+Julia 还提供了 `@simd ivdep` 宏，它进一步告诉编译器循环顺序不存在内存依赖性。然而，我**强烈地不建议**使用此宏，除非你**真的**知道自己在做什么。一般来说，编译器最能知道何时循环会存在内存依赖性，而 `@simd ivdep` 宏的滥用可能会很容易导致难以排查的 bug。
 """
 
 # ╔═╡ f5c28c92-8af1-11eb-318f-5fa059d8fd80
