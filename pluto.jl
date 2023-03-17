@@ -1173,13 +1173,13 @@ md"""
 
 # ╔═╡ 72e1b146-8c1c-11eb-2c56-b1342271c2f6
 md"""
-## Be aware of memory dependencies
+## 注意内存依赖
 
-Thinking about it more deeply, why *is* the perfectly predicted example above faster than the solution that avoids having that extra branch there at all?
+考虑更深一点，上面完美预测的例子 **为什么** 比完全避免了额外分支的解决方法还要快?
 
-Let's look at the assembly code. Here, I've just cut out the assembly for the loop (since almost all time is spent there)
+我们来看一下汇编码。此处只展示了循环部分的汇编码（因为几乎所有的时间都花费在此）
 
-For the branch-ful version, we have:
+对于多分支的版本，我们有：
 ```julia
 1 L48:
 2     incq	%rsi
@@ -1194,7 +1194,7 @@ For the branch-ful version, we have:
 11	jmp	L48
 ```
 
-And for the branch-less, we have:
+对于少分支的版本，我们有：
 ```julia
 1 L48:
 2	movq	(%r9,%rcx,8), %rdx
@@ -1206,29 +1206,29 @@ And for the branch-less, we have:
 8	jne	L48
 ```
 
-The branch-ful executes 9 instructions per iteration (remember, all iterations had uneven numbers), whereas the branch-less executes only 7. Looking at the table for how long instructions take, you will find all these instructions are fast. So what gives?
+多分支版本每次迭代执行 9 条指令（记住，所有的迭代都是无规律的数），而少分支版本每次只执行 7 条指令。查看指令耗时的表格，你就会发现这些指令都很快。那么这是什么呢？
 
-To understand what is happening, we need to go a little deeper into the CPU. In fact, the CPU does not execute CPU instructions in a linear fashion as the assembly code would have you believe. Instead, a more accurate (but still simplified) picture is the following:
+为了理解发生了什么，我们需要研究 CPU 的更深层次。实际上，CPU 不会像汇编码那样以线性顺序执行这些 CPU 指令。反而，一个更精确（但仍做简化）的流程如下：
 
-1. The CPU reads in CPU instructions. It then on-the-fly translates these CPU instructions to a set of even lower-level instructions called _micro-operations_ or _µops_. The important difference between µops and CPU instructions is that while only a few different registers can be referred to by the instructions, the actual processor has many more registers, which can be addressed by µops. Code written with µops is called _microcode_.
+1. CPU 读入所有的 CPU 指令。然后立即将这些 CPU 指令翻译为更低级的指令，它们被称为 _micro-operations_ 或 _µops_。 µops 和 CPU 指令的重要区别是 CPU 指令只能引用少数几个不同的寄存器，然而真实的处理器拥有更多的寄存器，这些寄存器可以被 µops 访问。使用 µops 编写的代码称为**微指令**（microcode）。
 
-2. This microcode is loaded into an internal array called the *reorder buffer* for storage. A CPU may hold more than 200 instructions in the reorder buffer at a time. The purpose of this storage is to allow execution of microcode in a highly parallel way. The code is then sent to execution in bulk.
+2. 这些微指令被加载到名为 **重排缓冲区**（reorder buffer）的内部数组中。CPU 一次性可在重排缓冲区保存 200 多条指令。这种存储方式是为了以高度并行的方式执行微指令。然后批量发送代码到执行部分。
 
-3. Finally, results from the reorder buffer is then shipped out to memory in the correct order.
+3. 最后， 然后以正确的顺序将重排缓冲区的结果发送到内存。
 
-The existance of a re-order buffer has two important implications (that I know about) for how you should think about your code:
+重排缓冲区的存在对你应该如何思考代码有两个重要影响（我所知道的）：
 
-First, your code is executed in large chunks often in parallel, not necessarily in the same order as it was loaded in. Therefore, _a program with more, slower CPU instructions can be faster than a program with fewer, faster instructions_, if the former program manages to execute more of them in parallel.
+首先，通常以并行方式执行大块代码，并不需要与加载的顺序相同。因此，如果使用较多、较慢 CPU 指令的程序能够并行执行更多 CPU 指令，那么它能比使用较少、较快 CPU 指令的程序更快。
 
-Second, branch prediction (as discussed in the previous section) does not happen just for the upcoming branch, but instead for a large amount of future branches, simultaneously.
+其次，分支预测（参见上节的讨论）不仅会发生在紧接着的分支，还会同时发生在大量的未来分支上。
 
-When visualizing how the code of the small `copy_odds_branches!` loop above is executed, you may imagine that the branch predictor predicts all branches, say, 6 iterations of the loop into the future, loads the microcode of all 6 future iterations into the reorder buffer, executes them all in parallel, and _then_ verifies - still in parallel - that its branches were guessed correctly.
+在可视化小循环 `copy_odds_branches!` 代码的执行过程时，你可以想象分支预测器预测了所有分支，即循环中未来的 6 次迭代， 将6次迭代的微指令加载到重排缓冲区，并行执行它们，**然后** 验证（仍然是并行的）分支是否猜测正确。
 
- Indicentally, this bulk processing is why a branch mispredict is so bad for performance - if a branch turns out to be mispredicted, all the work in the reorder buffer must be scrapped, the and the CPU must start over with fetching new instructions, compile them to microcode, fill the buffer et cetera.
+很明显，这种批处理正是分支预测错误导致性能糟糕的原因 —- 如果某个分支被发现是错误预测的，那么重排缓冲区的所有的工作都应被抛弃，然后 CPU 必须重新开始拉取新指令，并将其编译为微指令等等。
 
-Let's think about the implications re-order buffer for a moment. Other than creating hard-to-predict branches, what kind of code can re write that messes up that workflow for the CPU?
+然后继续考虑重排缓冲区的影响。除了创建难以预测的分支外，我们能够编写什么样的代码来打乱CPU的工作流程？
 
-What if we do this?
+我们这样做会发生什么？
 """
 
 # ╔═╡ 7732b6d8-8dab-11eb-0bc2-19690386ec27
@@ -1251,13 +1251,14 @@ end
 
 # ╔═╡ a5d93434-8dac-11eb-34bf-91061089f0ef
 md"""
-If you think about it, `read_indices` does strictly less work than any of the `copy_odds` functions. It doesn't even check if the numbers it copies are odd. Yet it's more than three times slower than `copy_odds_branches`!
+仔细想想， `read_indices` 要比任何版本的 `copy_odds` 函数进行的操作都少。它甚至不检查复制的数是否为奇数。然而，它要比 `copy_odds_branches` 慢 3 倍！
 
-The difference is *memory dependencies*. We humans, seeing that the input data is simply a range of numbers, can tell _precisely_ what the function should do at every iteration: Simply copy the next number over. But the compiler _can't_ predict what the next number it loads will be, and therefore where it needs to store the loaded number. We say that the code has a memory dependency on the number it loads from `src`.
+区别正是 **内存依赖**。看见输入数据是一组简单的数字，我们人类就能准确地明白函数在每次迭代时执行的操作：简单地拷贝下一个数而已。但是，编译器**不能** 预测下一个即将加载的数，因此需要存储已加载的数。故称代码在从 `src` 加载数这部分产生了内存依赖。
 
-In that case, the reorder buffer is of no use. All the instructions get loaded in, but are simply kept idle in the reorder buffer, because they simply *cannot* be executed until it's "their turn".
+在此例中，重排缓冲区排不上用场。所有的指令都被加载进 CPU，但只能在重排缓冲区处于闲置状态，因为在“轮到它们”之前，他们**不能**被执行。
 
 Going back to the original example, that is why the perfectly predicted `copy_odds_branches!` performs better than `code_odds_branchless!`. Even though the latter has fewer instructions, it has a memory dependency: The index of `dst` where the odd number gets stored to depends on the last loop iteration. So fewer instructions can be executed at a time compared to the former function, where the branch predictor predicts several iterations ahead and allow for the parallel computation of multiple iterations.
+回到最初的例子，这就是为什么完美预测的 `copy_odds_branches!` 比 `code_odds_branchless!` 还要快。即使后者具有更少的指令，但是它具有内存依赖性：保存奇数的 `dst` 的索引取决于上一次迭代。而在前者执行时，分支预测器预测几次迭代，并且允许并行计算多次迭代。所以，相比前者一次只能执行更少的指令。
 """
 
 # ╔═╡ 0b6d234e-8af3-11eb-1ba9-a1dcf1497785
