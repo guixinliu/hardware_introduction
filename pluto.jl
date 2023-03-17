@@ -1082,16 +1082,16 @@ md"""
 
 # ╔═╡ c36dc5f8-8af2-11eb-3f35-fb86143a54d2
 md"""
-## Avoid unpredicable branches
-As mentioned previously, CPU instructions take multiple cycles to complete, but may be queued into the CPU before the previous instruction has finished computing. So what happens when the CPU encounters a branch (i.e. a jump instruction)? It can't know which instruction to queue next, because that depends on the instruction that it just put into the queue and which has yet to be executed.
+## 避免不可预测的分支
+如前所述，CPU 指令需要花费多个时钟周期，但可能要在前面的指令完成计算前放入队列。那么当 CPU 遇到分支时会发生什么（例如，跳转指令）？它会不知道接下来将哪条指令放入队列，因为这取决于前面刚刚放入队列的指令以及那些还未执行的指令。
 
-Modern CPUs make use of *branch prediction*. The CPU has a *branch predictor* circuit, which guesses the correct branch based on which branches were recently taken. In essense, the branch predictor attempts to learn simple patterns in which branches are taken in code, while the code is running. After queueing a branch, the CPU immediately queues instructions from whatever branch predicted by the branch predictor. The correctness of the guess is verified later, when the queued branch is being executed. If the guess was correct, great, the CPU saved time by guessing. If not, the CPU has to empty the pipeline and discard all computations since the initial guess, and then start over. This process causes a delay of a few nanoseconds.
+现代 CPU 会使用 **分支预测**。 CPU 中有一个 **分支预测器** 电路，它能够基于最近选择的分支猜测接下来的正确分支。实际上，当代码运行时，分支预测器会尝试从代码中已执行的分支中学习一些简单模式。在将之前的分支放入队列后，CPU 立即将分支预测器预测的所有分支的指令放入队列。然后在执行队列中的分支时验证猜测的正确性。如果猜测正确，这很棒，CPU 借助猜测节省了时间。如果猜测错误， 那么 CPU 不得不清空计算管道，并丢弃自最初的猜测开始以来的所有计算过程。这个过程会导致大约几纳秒的延迟。
 
-For the programmer, this means that the speed of an if-statement depends on how easy it is to guess. If it is trivially easy to guess, the branch predictor will be correct almost all the time, and the if statement will take no longer than a simple instruction, typically 1 clock cycle. In a situation where the branching is random, it will be wrong about 50% of the time, and each misprediction may cost many clock cycles.
+对于程序员来说，这意味着 if 语句的速度取决于它的分支有多容易被猜测。如果非常容易猜测，那么分支预测器将几乎一直是正确的，同时 if 语句将只需要 1 条指令，一般为 1 时钟周期。在分支完全随机的情形中，它将在整个过程中大约具有 50% 的正确率，同时每次错误预测都会导致消耗很多时钟周期。
 
-Branches caused by loops are among the easiest to guess. If you have a loop with 1000 elements, the code will loop back 999 times and break out of the loop just once. Hence the branch predictor can simply always predict "loop back", and get a 99.9% accuracy.
+循环中的分支是最容易猜测的。如果有一个迭代 1000 元素的循环，代码循环 999 次而只返回 1 次。因此分支预测器通常能简单地预测为 “循环”，并且有 99.9% 的准确率。
 
-We can demonstrate the performance of branch misprediction with a simple function:
+可以使用如下的简单函数演示分支预测错误的性能：
 """
 
 # ╔═╡ c96f7f50-8af2-11eb-0513-d538cf6bc619
@@ -1120,9 +1120,9 @@ end
 
 # ╔═╡ d53422a0-8af2-11eb-0417-b9740c4a571c
 md"""
-In the first case, the integers are random, and about half the branches will be mispredicted causing delays. In the second case, the branch is always taken, the branch predictor is quickly able to pick up the pattern and will reach near 100% correct prediction. As a result, on my computer, the latter is around 8x faster.
+在第一个例子中，整数是随机的，并且大约一半的分支预测错误从而引起延迟。在第二个例子中，总是选择该分支，分支预测器能够迅速习得预测模式，并将具有接近 100% 的预测正确率。因此，在我的电脑上，后者大约快 8 倍。
 
-Note that if you use smaller vectors and repeat the computation many times, as the `@btime` macro does, the branch predictor is able to learn the pattern of the small random vectors by heart, and will reach much better than random prediction. This is especially pronounced in the most modern CPUs (and in particular the CPUs sold by AMD, I hear) where the branch predictors have gotten much better. This "learning by heart" is an artifact of the loop in the benchmarking process. You would not expect to run the exact same computation repeatedly on real-life data:
+要注意的是，若你使用更小的向量并多次重复计算，就像 `@btime` 做的那样，那么分支预测器将能通过记忆学习小向量的模式，并取得比随机预测更好的性能。这在现代 CPU （我听说特别是 AMD 出售的 CPU）中特别明显，因为它们的分支预测器做得更好。这种 “记忆学习” 模式是基准测试过程中循环的产物。你不会期望对真实数据重复执行完全相同的计算：
 """
 
 # ╔═╡ dc5b9bbc-8af2-11eb-0197-9b5da5087f0d
@@ -1138,9 +1138,9 @@ end
 
 # ╔═╡ e735a302-8af2-11eb-2ce7-01435b60fdd9
 md"""
-Because branches are very fast if they are predicted correctly, highly predictable branches caused by error checks are not of much performance concern, assuming that the code essensially never errors. Hence a branch like bounds checking is very fast. You should only remove bounds checks if absolutely maximal performance is critical, or if the bounds check happens in a loop which would otherwise SIMD-vectorize.
+若预测正确，这些分支会非常快。假设代码本质上不存在错误，那么错误检查引起的高可预测性分支不会带来太多的性能损失。因此边界检查这样的分支会非常快。然而，只有获得最佳性能非常重要时，或者出现在可 SIMD 向量化的循环中，边界检查才应该被去除。
 
-If branches cannot be easily predicted, it is often possible to re-phrase the function to avoid branches all together. For example, in the `copy_odds!` example above, we could instead write it like so:
+若分支不能简单地预测，那么通常应该改写代码以避免所有的分支。例如，对于上面的`copy_odds!` 函数例子，可以像下面这样改写：
 """
 
 # ╔═╡ eb158e60-8af2-11eb-2227-59d6404e3335
@@ -1166,9 +1166,9 @@ end
 
 # ╔═╡ f969eed2-8af2-11eb-1e78-5b322a7f4ebd
 md"""
-Which contains no other branches than the one caused by the loop itself (which is easily predictable), and results in speeds slightly worse than the perfectly predicted one, but much better for random data.
+上述代码除了一个由循环本身引起的分支（容易预测）外不含任何分支。另外，速度上稍差于完美预测的情况，但是比随机数据要好很多。
 
-The compiler will often remove branches in your code when the same computation can be done using other instructions. When the compiler fails to do so, Julia offers the `ifelse` function, which sometimes can help elide branching.
+当可以使用其他指令执行相同的计算时，编译器通常会移除分支。若编译器不能做到这一点，Julia 提供的 `ifelse` 函数有时也能帮助删除分支。
 """
 
 # ╔═╡ 72e1b146-8c1c-11eb-2c56-b1342271c2f6
