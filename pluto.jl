@@ -1330,16 +1330,16 @@ md"""
 
 对于 CPU 密集型程序，内存总是忙于一个线程，程序员并不能利用超线程做太多事。实际上，对于多数已经优化过的程序，**禁用** 超线程通常会带来更好的性能。然而，大多数程序是未被优化的，故可以从超线程中获益。
 
-#### Parallelizability
-Multithreading is more difficult that any of the other optimizations, and should be one of the last tools a programmer reaches for. However, it is also an impactful optimization. Scientific compute clusters usually contain many (e.g. hundreds, or thousands) of CPUs with tens of CPU cores each, offering a massive potential speed boost ripe for picking.
+#### 可并行性
+多线程要比其他任何的优化方式都难，故应该是程序员最后使用的工具。然而，它也是强有力的优化。科学计算集群通常配置有许多（成百上千）具有数十个核的CPU，这其中有着巨大的潜在性能提升空间。
 
-A prerequisite for efficient use of multithreading is that your computation is able to be broken up into multiple chunks that can be worked on independently. Luckily the majority of compute-heavy tasks (at least in my field of work, bioinformatics), contain sub-problems that are *embarassingly parallel*. This means that there is a natural and easy way to break it into sub-problems that can be processed independently. For example, if a certain __independent__ computation is required for 100 genes, it is natural to use one thread for each gene. The size of the problem is also important. There is a small overhead involved with spawning (creating) a thread, and fetching the result from the computation of a thread. Therefore, for it to pay off, each thread should have a task that takes at least a few microseconds to complete.
+一个高效使用多线程的前提是你的计算可以被拆分为多个独立执行的程序块。幸运的是，大多数计算密集型任务（至少我的领域，生物信息学），包含着一些 **易并行的** 子问题。这意味着可以使用自然且简单的方法将程序拆分为多个可独立处理的子问题。例如，如果需要对 100 个基因应用一定的 **独立** 计算，那么可以很自然地想到为每个基因分配一个线程。问题的规模也很重要。创建线程和从线程获取计算结果会有小的开销。因此，为了获得回报，每个线程都应执行至少需要几毫秒才能完成的任务。
 
-Let's have an example of a small embarrasingly parallel problem. We want to construct a [Julia set](https://en.wikipedia.org/wiki/Julia_set). Julia sets are named after Gaston Julia, and have nothing to do with the Julia language. Julia sets are (often) fractal sets of complex numbers. By mapping the real and complex component of the set's members to the X and Y pixel value of a screen, one can generate the LSD-trippy images associated with fractals.
+让我们考虑一个易并行的小例子。我们想要构建一个 [Julia 集](https://zh.wikipedia.org/wiki/%E6%9C%B1%E5%88%A9%E4%BA%9A%E9%9B%86%E5%90%88)。 Julia 集以 Gaston Julia 命名，与 Julia 语言无关。Julia 集（通常）是复数分形集合。通过把集合中复数的实部和虚部分别映射到屏幕的 X 与 Y 像素位置，我们就可以生成与分形集合有关的 LSD-trippy 图。
 
-The Julia set I create below is defined thus: We define a function $f(z) = z^2 + C$, where $C$ is some constant. We then record the number of times $f$ can be applied to any given complex number $z$ before $|z| > 2$. The number of iterations correspond to the brightness of one pixel in the image. We simply repeat this for a range of real and imaginary values in a grid to create an image.
+下面创建的 Julia 集的定义是：复函数$f(z) = z^2 + C$，其中 $C$ 是复常数。然后给定任意复数 $z$ ，记录在 $|z| > 2$ 之前 $f$ 可以作用到 $z$ 的迭代次数。迭代的次数对应了图像中像素的亮度。我们对一块网格的实部和虚部都执行此操作，从而绘制出图。  
 
-First, let's see a non-parallel solution:
+首先，我们写一个非并行的版本：
 """
 
 # ╔═╡ 316e5074-8af3-11eb-256b-c5b212f7e0d3
@@ -1382,7 +1382,7 @@ end;
 @time julia_single_threaded();
 
 # ╔═╡ 3e83981a-8af3-11eb-3c87-77797adb7e1f
-md"That took around 2 seconds on my computer. Now for a parallel one:"
+md"在我的电脑上，它大约花费 2 秒。现在来看并行的版本："
 
 # ╔═╡ 3e1c4090-8af3-11eb-33d0-b9c299fef20d
 begin
@@ -1413,13 +1413,13 @@ end;
 
 # ╔═╡ 4e8f6cb8-8af3-11eb-1746-9384995d7022
 md"""
-This is almost exactly 4 times as fast! With 4 threads, this is close to the best case scenario, only possible for near-perfect embarrasingly parallel tasks.
+多线程比单线程版本几乎快 4 倍！这接近 4 线程的最佳情况，不过这只对近乎完美的易并行任务来说是可能的。
 
-Despite the potential for great gains, in my opinion, multithreading should be one of the last resorts for performance improvements, for three reasons:
+在我看来，即使能够获得巨大的潜力，多线程也应该是最后启用的性能提升手段，原因有三：
 
-1. Implementing multithreading is harder than other optimization methods in many cases. In the example shown, it was very easy. In a complicated workflow, it can get messy quickly.
-2. Multithreading can cause hard-to-diagnose and erratic bugs. These are almost always related to multiple threads reading from, and writing to the same memory. For example, if two threads both increment an integer with value `N` at the same time, the two threads will both read `N` from memory and write `N+1` back to memory, where the correct result of two increments should be `N+2`! Infuriatingly, these bugs appear and disappear unpredictably, since they are causing by unlucky timing. These bugs of course have solutions, but it is tricky subject outside the scope of this document.
-3. Finally, achieving performance by using multiple threads is really achieving performance by consuming more resources, instead of gaining something from nothing. Often, you pay for using more threads, either literally when buying cloud compute time, or when paying the bill of increased electricity consumption from multiple CPU cores, or metaphorically by laying claim to more of your users' CPU resources they could use somewhere else. In contrast, more *efficent* computation costs nothing.
+1. 在大多数情境中实现多线程要比其他优化方法更难。本文所示的例子很简单，但在复杂的工作流中，他很快会变得一团糟。
+2. 多线程会使得程序难以调试和产生不稳定的 bug。 这通常与多个线程读取和写入同一块内存有关。例如，如果两个线程同时将整数 `N` 加一，那么两个线程将会都从程序中读取`N`而向内存写入`N+1`，正确的结果就变成了两次加法即`N+2`！令人恼火的是，这些 bug 的出现的消失时不可预测的，因为它们是不太幸运的时间导致的。这些 bug 的解决方案是比较棘手的话题，并且超出了本文的范围。
+3. 最后，通过多线程获得的性能是通过消耗更多的资源的实现的，而不是不劳而获。通常，你要为使用多线程付费，无论是在购买云计算时间时，还是为多核 CPU 增加的电力费用支付时，还是声称用户可能在其他地方使用了更多的 CPU 资源。相比之下，更 **高效的** 计算不消耗任何成本。
 """
 
 # ╔═╡ 54d2a5b8-8af3-11eb-3273-85d551fceb7b
