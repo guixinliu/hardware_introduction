@@ -1424,16 +1424,16 @@ md"""
 
 # ╔═╡ 54d2a5b8-8af3-11eb-3273-85d551fceb7b
 md"""
-## GPUs
-So far, we've covered only the most important kind of computing chip, the CPU. But there are many other kind of chips out there. The most common kind of alternative chip is the *graphical processing unit* or GPU.
+## GPU
+截止目前，我们已经讨论了计算芯片 CPU 的绝大部分话题。但是还存在其它类型的芯片。最常见的替代芯片是 **图形处理单元（graphical processing unit）**，即 GPU。
 
-As shown in the above example with the Julia set, the task of creating computer images are often embarassingly parallel with an extremely high degree of parallelizability. In the limit, the value of each pixel is an independent task. This calls for a chip with a high number of cores to do effectively. Because generating graphics is a fundamental part of what computers do, nearly all commercial computers contain a GPU. Often, it's a smaller chip integrated into the motherboard (*integrated graphics*, popular in small laptops). Other times, it's a large, bulky card.
+如上面 Julia 集合的例子所示，创建计算机图像的任务通常是具有极高并行度的易并行任务。极限情况下每一个像素都可以是单独的任务。这需要芯片能够有大量的核来进行高效计算。因为生成图像是计算机最基本的环节，所以几乎所有的商业电脑都包含 GPU。它通常是一块集成在主板上的小型芯片（**集成显卡**，在笔记本中很流行）。在其他情况下，它是又大又重的厚卡片。
 
-GPUs have sacrificed many of the bells and whistles of CPUs covered in this document such as specialized instructions, SIMD and branch prediction. They also usually run at lower frequencies than CPUs. This means that their raw compute power is many times slower than a CPU. To make up for this, they have a high number of cores. For example, the high-end gaming GPU NVIDIA RTX 2080Ti has 4,352 cores. Hence, some tasks can experience 10s or even 100s of times speedup using a GPU. Most notably for scientific applications, matrix and vector operations are highly parallelizable.
+GPU 牺牲掉了许多本文中所提到的 CPU 上的高级功能，如专用指令、 SIMD 和 分支预测。它们的工作频率也通常比 CPU 低。 这意味着，他们的裸计算能力要慢于 CPU。为了弥补这一点，它们使用了大量的核。例如，高端游戏 GPU NVIDIA RTX 2080Ti 有 4352 个核。因此，一些任务在使用 GPU 后获得 10 倍甚至 100 倍的加速。值得关注的是， 科学应用中的矩阵和向量计算都是高度并行的。
 
-Unfortunately, the laptop I'm writing this document on has only integrated graphics, and there is not yet a stable way to interface with integrated graphics using Julia, so I cannot show examples.
+不幸的是，用于本文写作的笔记本只有集成显卡。同时也没有稳定方式可以使得 Julia 与图形显卡交互，所以我给不出例子。
 
-There are also more esoteric chips like TPUs (explicitly designed for low-precision tensor operations common in deep learning) and ASICs (an umbrella term for highly specialized chips intended for one single application). At the time of writing, these chips are uncommon, expensive, poorly supported and have limited uses, and are therefore not of any interest for non-computer science researchers.
+还有一些更专用的芯片，比如TPU （专为深度学习中常见的低精度张量计算设计），以及 AISC（用于单一应用的高度专用芯片）。在写作本文时，这些芯片并不常见、价格昂贵、支持性差以及用途有限，因此非计算机领域的科学研究人员并不对它们感兴趣。
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
