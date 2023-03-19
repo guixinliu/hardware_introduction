@@ -1263,28 +1263,28 @@ Going back to the original example, that is why the perfectly predicted `copy_od
 
 # ╔═╡ 0b6d234e-8af3-11eb-1ba9-a1dcf1497785
 md"""
-## Variable clock speed
+## 变化的时钟速度
 
-A modern laptop CPU optimized for low power consumption consumes roughly 25 watts of power on a chip as small as a stamp (and thinner than a human hair). Without proper cooling, this will cause the temperature of the CPU to skyrocket and melting the plastic of the chip, destroying it. Typically, CPUs have a maximal operating temperature of about 100 degrees C. Power consumption, and therefore heat generation, depends among many factors on clock speed, higher clock speeds generate more heat.
+做了功耗优化的现代笔记本电脑 CPU 大约只消耗 25W 的功率，但是芯片只有邮票大小（比人的头发丝还薄）。如果没有适当的散热，那么 CPU 的温度将会飙升，CPU 芯片中的塑料将会融化，芯片也就被毁坏了。一般情况下，CPU 的最高工作温度大约在 100 摄氏度。功耗和发热取决于诸多由时钟速度影响的因素，更高的时钟速度往往产生更多的热量。    
 
-Modern CPUs are able to adjust their clock speeds according to the CPU temperature to prevent the chip from destroying itself. Often, CPU temperature will be the limiting factor in how quick a CPU is able to run. In these situations, better physical cooling for your computer translates directly to a faster CPU. Old computers can often be revitalized simply by removing dust from the interior, and replacing the cooling fans and [CPU thermal paste](https://en.wikipedia.org/wiki/Thermal_grease)!
+为了避免自毁，现代 CPU 能够根据工作温度来调整其时钟速度。通常，CPU 工作温度会限制 CPU 的运行速度。在这些情景中，更好的物理散热直接意味着更快的 CPU。对于旧电脑，简单清理内部灰尘并替换散热扇和[CPU 导热膏](https://zh.wikipedia.org/wiki/%E5%B0%8E%E7%86%B1%E8%86%8F) 即可使其重获新生！
 
-As a programmer, there is not much you can do to take CPU temperature into account, but it is good to know. In particular, variations in CPU temperature often explain observed difference in performance:
+作为程序员，我们在 CPU 温度这件事上能做的不多，但了解的话更好。特别是，可观测到的性能差异通常可以用CPU 温度的改变来解释：
 
-* CPUs usually work fastest at the beginning of a workload, and then drop in performance as it reaches maximal temperature
-* SIMD instructions usually require more power than ordinary instructions, generating more heat, and lowering the clock frequency. This can offset some performance gains of SIMD, but SIMD will nearly always be more efficient when applicable. One exception is the relatively recent 512-bit SIMD instructions. In current (2021) CPUs, these instructions draw so much power that the resulting clock frequency lowering actually leads to overall performance decrease for some workloads. This problem will probably be solved in the near future, either by the power draw begin reduced, by consumer chips abandoning 512-bit SIMD, or by compilers refusing to compile to these instructions.
+* CPU 通常在负载刚开始时工作得最快，然后在达到最高温度时出现性能下降。
+* 与普通指令相比， SIMD 指令需要更多能量，产生更多的热量，并且会降低时钟频率。这会降低由 SIMD 带来的性能提升，但SIMD在其能生效时总是更高效的。一个例外是最近较新的 512 位 SIMD 指令。在现在（2021）的 CPU 上，这些指令消耗更多能量从而导致时钟频率降低，实际上会在某些负载中出现总体上的性能下降。这个问题可能会在不远的将来解决。要么降低指令功耗，要么消费者放弃 512 位 SIMD, 抑或是编译器拒绝编译这些指令。
 """
 
 # ╔═╡ 119d269c-8af3-11eb-1fdc-b7ac75b89cf2
 md"""
-## Multithreading
-In the bad old days, CPU clock speed would increase every year as new processors were brought onto the market. Partially because of heat generation, this acceleration slowed down once CPUs hit the 3 GHz mark. Now we see only minor clock speed increments every processor generation. Instead of raw speed of execution, the focus has shifted on getting more computation done per clock cycle. CPU caches, CPU pipelining (i.e. the entire re-order buffer "workflow"), branch prediction and SIMD instructions are all important contibutions in this area, and have all been covered here.
+## 多线程
+在古早年代，随着新处理器上市，CPU 时钟速度每年都会增长。部分提升是因为散热，但当 CPU 达到 3 GHz 后，这种加速效果就会减弱。现在，我们可以看到处理器代际间的时钟速度增量很小。现在的重点已经转移到了在每个时钟周期内执行更多的计算，而不是关注真实的执行速度。CPU 缓存、CPU 指令流水线（即重排缓冲区“工作流”）、分支预测以及 SIMD 指令都是这一领域的重要贡献，这些也都包含在本文。
 
-Another important area where CPUs have improved is simply in numbers: Almost all CPU chips contain multiple smaller CPUs, or *cores* inside them. Each core has their own small CPU cache, and does computations in parallel. Furthermore, many CPUs have a feature called *hyper-threading*, where two *threads* (i.e. streams of instructions) are able to run on each core. The idea is that whenever one process is stalled (e.g. because it experiences a cache miss or a branch misprediction), the other process can continue on the same core. The CPU "pretends" to have twice the amount of processors.
+另一 CPU 改进的重要方向是增加数量：几乎所有的 CPU 芯片都包含多个小型 CPU, 或者说 **核**。每个核都有它们自己的小型 CPU 缓存，并且能够并行地进行计算。另外，许多CPU 都支持一种叫做 **超线程** 的特性，它使得两个 **线程** （即指令流）能够运行在一个内核上。其思想是，当一个进程停止时（比如因为遭遇了缓存未命中或分支预测错误），另一个进程能够在同一个核上继续执行。CPU “假装“ 拥有两倍的处理器。
 
-Hyperthreading only really matters when your threads are sometimes prevented from doing work. Besides CPU-internal causes like cache misses, a thread can also be paused because it is waiting for an external resource like a webserver or data from a disk. If you are writing a program where some threads spend a significant time idling, the core can be used by the other thread, and hyperthreading can show its value.
+仅当线程可能会停止工作时，超线程技术才有意义。线程暂停的原因除了 CPU 内部的如缓存未命中，还可能是是等待外部资源，比如 web 服务器返回的数据或从硬盘读取的数据。如果在你编写的程序中部分线程花费大量的时间空转，那么内核即可被其他线程使用，此时超线程体现出了它的价值。
 
-Let's see our first parallel program in action. First, we need to make sure that Julia actually was started with the correct number of threads. To do this, start Julia with the `-t` option - e.g. `-t 8` for 8 threads. I have set Julia to have 4 threads:
+接下来看看第一个并行程序。首先，我们需要确保 Julia 启动了正确数量的线程。实现方式是启动时添加 `-t` 选项 —— 例如`-t 8`对应 8 线程。 我的 Julia 设置为了 4 线程：  
 """
 
 # ╔═╡ 1886f60e-8af3-11eb-2117-eb0014d2fca1
@@ -1299,8 +1299,8 @@ function half_asleep(start::Bool)
 		t1 = time()
 		while time() - t1 < 0.1
 			for i in 1:100000
-            	a, b = a + b, a
-			end
+                a, b = a + b, a
+            end
         end
         start || sleep(0.1)
     end
@@ -1326,9 +1326,9 @@ end
 
 # ╔═╡ 2d0bb0a6-8af3-11eb-384d-29fbb0f66f24
 md"""
-You can see that with this task, my computer can run 8 jobs in parallel almost as fast as it can run 1. But 16 jobs takes much longer. This is because 4 can run at the same time, and 4 more can sleep for a total of 8 concurrent jobs.
+可以看到在此任务中，我的电脑并行运行 8 项任务几乎和运行一项任务一样快。但是16 项任务花费的时间多些。这是因为 4 个任务可以同时运行，另外 4 个任务处于休眠状态，总共同时运行8个程序。
 
-For CPU-constrained programs, the core is kept busy with only one thread, and there is not much to do as a programmer to leverage hyperthreading. Actually, for the most optimized programs, it usually leads to better performance to *disable* hyperthreading. Most workloads are not that optimized and can really benefit from hyperthreading, however.
+对于 CPU 密集型程序，内存总是忙于一个线程，程序员并不能利用超线程做太多事。实际上，对于多数已经优化过的程序，**禁用** 超线程通常会带来更好的性能。然而，大多数程序是未被优化的，故可以从超线程中获益。
 
 #### Parallelizability
 Multithreading is more difficult that any of the other optimizations, and should be one of the last tools a programmer reaches for. However, it is also an impactful optimization. Scientific compute clusters usually contain many (e.g. hundreds, or thousands) of CPUs with tens of CPU cores each, offering a massive potential speed boost ripe for picking.
