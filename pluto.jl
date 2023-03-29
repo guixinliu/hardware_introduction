@@ -13,11 +13,11 @@ end
 
 # ╔═╡ 15f5c31a-8aef-11eb-3f19-cf0a4e456e7a
 md"""
-# 每个科研工作者都需要了解的关于高性能代码的硬件知识
+# 每个科研工作者在写高性能代码时都需了解的硬件知识
 
 **本教程的英文版位于 https://github.com/jakobnissen/hardware_introduction**
 
-现如今，编程已经成为许多科研领域的一项基本技能，许多科学家都需要为他们的科研项目写一些特定代码。
+现如今，编程已经成为许多科研领域的一项基本技能，许多科学家都需要为他们的科研项目编写一些特定的代码。
 不过，大部分科研工作者其实并不是科班出身的程序员，他们也仅仅只是因为需要才去学习编程。
 我认为自己就是其中之一。
 虽然从**软件**层面来说我们可能已经很熟悉编程了，但是对于**硬件**是如何影响代码性能这件事情，我们知之甚少。
@@ -28,18 +28,18 @@ md"""
 
 ## 不会覆盖的内容
 #### 关于 Julia 编程语言的指南 
-为了编写快速代码，你必须首先了解你的编程语言及其特性。但这**不是**关于 Julia 编程语言的指南。我建议阅读 Julia 文档中的[性能建议](https://docs.juliacn.com/latest/manual/performance-tips/) 节。
+为了编写高性能的代码，你必须首先了解你的编程语言及其特性。但本文**不是**关于 Julia 编程语言的指南。我建议阅读 Julia 文档中的[性能建议](https://docs.juliacn.com/latest/manual/performance-tips/) 节。
 
 #### 关于特定数据结构或算法的说明
-为了加速代码，除了要弄明白编程语言，你也必须理解你自己的代码。你必须了解大 O 记号，为什么一些算法比其他算法快, 以及不同数据结构内部如何组织。若是不知道**什么是`Array`**，又怎么能够使用数组优化代码？
+为了加速代码，除了要弄明白编程语言，你也必须理解你自己的代码。你必须了解大 O 记号，为什么一些算法比其他算法快, 以及不同数据结构内部如何组织。若是不知道什么是**`数组（Array）`**，又怎么能够使用数组优化代码？
 
 这同样超出了本文的范围。然而，我想说的是，一个编程选手至少应该了解：
 
 * 二进制整数在内存中的表示方式
 * 浮点数在内存中的表示方式 -- 学习这点也是必要的，因为这有助于理解浮点运算的计算误差，而浮点运算是科学计算中不可或缺的部分
-* `String` 的内存布局，包括 ASCII 和 UTF-8 编码
-* 关于`Array` 结构化的基本知识，以及由数构成的稠密数组与对象引用数组之间的区别
-* 哈希表（如字典 `Dict` 和集合 `Set`）背后的工作原理
+* 字符串类型 `String` 的内存布局，包括 ASCII 和 UTF-8 编码
+* 关于数组类型 `Array` 结构的基本知识，以及由数构成的稠密数组与对象引用数组之间的区别
+* 哈希表（如字典类型 `Dict` 和集合类型 `Set`）背后的工作原理
 
 此外，我还建议熟悉：
 
@@ -48,7 +48,7 @@ md"""
 * 元组（Tuple）
 
 #### 这不是关于代码基准测试的教程
-**实际**编写高性能代码时，测试代码查找瓶颈是非常有必要的，即找出机器消耗大多数时间的地方。通常必须需要对不同的函数和方法进行基准测试，才能找到最快实践。Julia（以及其他语言）为此提供了工具，但此处不做介绍。
+**实际**编写高性能代码时，测试代码查找瓶颈是非常有必要的，即找出机器消耗大多数时间的地方。通常必须需要对不同的函数和方法进行基准测试，才能找到最快的实践。Julia（以及其他语言）为此提供了工具，但此处不做介绍。
 """
 
 # ╔═╡ 5dd2329a-8aef-11eb-23a9-7f3c325bcf74
@@ -381,12 +381,12 @@ md"然而，现代编译器非常智能，常常能够在保证结果相同的�
 @code_native debuginfo=:none dump_module=false divide_slow(UInt(1))
 
 # ╔═╡ d70c56bc-8af0-11eb-1220-09e78dba26f7
-md"## Allocations and immutability
-As already mentioned, main RAM is much slower than the CPU cache. However, working in main RAM comes with an additional disadvantage: Programs are handed a bunch of RAM by the operating system (OS) to work with. Within that chunk of memory, the program itself needs to keep track of what RAM is in use by which objects. If the program didn't keep track, the creation of one object in memory could overwrite another object, causing data loss. Therefore, every creation and destruction of data in RAM requires book-keeping, that takes time.
+md"## 内存分配和不可变性
+如前文所述，主 RAM 要比 CPU 缓存慢。然而，在主 RAM 中工作还有另外的缺点：操作系统（operating system，OS）会给多个应用提供不同的RAM。在内存块中，程序自己需要追踪对象正在使用哪些RAM。若不追踪， 一个对象的分配内存就可能覆盖另一个，这则会数据丢失。因此，RAM需要花时间记录每份数据的产生和销毁。
 
-The creation of new objects in RAM is termed *allocation*, and the destruction is called *deallocation*. Really, the (de)allocation is not really *creation* or *destruction* per se, but rather the act of starting and stopping keeping track of the memory. Memory that is not kept track of will eventually be overwritten by other data. Allocation and deallocation take a significant amount of time depending on the size of objects, from a few tens of nanoseconds to a few microseconds per allocation.
+RAM 中创建新对象称为 **分配（allocation）**，对应地，销毁对象称为 **释放（deallocation）**。实际上，分配（释放）本质上并不是真的在 **创造** 或 **销毁** ，而是开始或停止追踪指定的内存。未被追踪的内存将会被其他数据覆盖。分配和释放所花费的时间取决于对象的大小，每次操作的数量级在数十 ns 到几 ms 之间。
 
-In programming languages such as Julia, Python, R and Java, deallocation is automatically done using a program called the *garbage collector* (GC). This program keeps track of which objects are rendered unreachable by the programmer, and deallocates them. For example, if you do:"
+Julia、Python、R 和 Java 等语言使用名为“垃圾回收器（garbage collector，GC）”的程序自动实现释放操作。此程序会追踪那些被程序员标记为不可访问的对象，然后释放它们。例如若这样写："
 
 # ╔═╡ dc24f5a0-8af0-11eb-0332-2bc0834d426c
 begin
@@ -395,13 +395,13 @@ begin
 end
 
 # ╔═╡ e3c136de-8af0-11eb-06f1-9393c0f95fbb
-md"Then there is no way to get the original array `[1,2,3]` back, it is unreachable. Hence it is simply wasting RAM, and doing nothing. It is *garbage*. Allocating and deallocating objects sometimes cause the GC to start its scan of all objects in memory and deallocate the unreachable ones, which causes significant lag. You can also start the garbage collector manually:"
+md"那么你将无法找回原来的数组 `[1,2,3]` ，它已经无法访问。这什么也没有做，只是在浪费 RAM。它是**垃圾**。分配和释放有时会导致 GC 开始扫描所有内存中的对象并释放无法访问的对象，而这样会带来显著的延迟。因此你也可以手动开始垃圾回收："
 
 # ╔═╡ e836dac8-8af0-11eb-1865-e3feeb011fc4
 GC.gc()
 
 # ╔═╡ ecfd04e4-8af0-11eb-0962-f548d2eabad3
-md"The following example illustrates the difference in time spent in a function that allocates a vector with the new result relative to one which simply modifies the vector, allocating nothing:"
+md"下面的例子展示了为结果分配新内存的程序和直接在原向量上更改的程序之间的用时差异："
 
 # ╔═╡ f0e24b50-8af0-11eb-1a0e-5d925f3743e0
 begin
@@ -423,34 +423,34 @@ end;
 
 # ╔═╡ 22512ab2-8af1-11eb-260b-8d6c16762547
 md"""
-On my computer, the allocating function is more than 15x slower on average. Also note the high maximum time spend on the allocating function. This is due to a few properties of the code:
-* First, the allocation itself takes time
-* Second, the allocated objects eventually have to be deallocated, also taking time
-* Third, repeated allocations triggers the GC to run, causing overhead
-* Fourth, more allocations sometimes means less efficient cache use because you are using more memory
+在我的电脑上，需要分配新内存的程序平均相比之下要慢15倍。另外，我们也需要关注函数内存分配所花费时间的最大值。这是因为代码具有以下性质：
+* 首先，分配动作本身需要花费时间；
+* 其次，已分配对象的销毁也需要花费时间；
+* 第三，重复的分配会触发垃圾回收，这又会带来额外的开销
+* 第四，越多的分配有时意味着越低效的缓存利用，因为使用了更多的内存 
 
-Note that I used the mean time instead of the median, since for this function the GC only triggers approximately every 30'th call, but it consumes 30-40 µs when it does. All this means performant code should keep allocations to a minimum.
+注意到，我使用的是时间的平均值，而不是中位数，这是因为大约每 30 次函数调用才会触发 1 次GC，每次GC花费 30-40 µs。综上，高性能代码应将内存分配保持在最低限度。
 
-The `@btime` macro, and other benchmarking tools, tell you the number of allocations. This information is given because it is assumed that any programmer who cares to benchmark their code will be interested in reducing allocations.
+我们可以使用 `@btime` 宏或者其他基准测试工具获取到内存分配的次数。提供此信息的原因是通常认为给代码做基准测试的开发者都会对减少内存分配感兴趣。
 
-#### Not all objects need to be allocated
-Inside RAM, data is kept on either the *stack* or the *heap*. The stack is a simple data structure with a beginning and end, similar to a `Vector` in Julia. The stack can only be modified by adding or subtracting elements from the end, analogous to a `Vector` with only the two mutating operations `push!` and `pop!`. These operations on the stack are very fast. When we talk about "allocations", however, we talk about data on the heap. Unlike the stack, the heap has an unlimited size (well, it has the size of your computer's RAM), and can be modified arbitrarily, deleting and accessing any objects. You can think of the stack like a `Vector`, and the heap like a `Dict`.
+#### 并非需要分配所有对象
+在 RAM 中，数据通常保存在 **栈** 或 **堆** 上。栈是具有起头和结尾的简单数据结构，类似于 Julia 中的 `Vector`。栈的修改方式只能是在结尾添加或移除元素，可类比于只支持可变操作 `push!` 和 `pop!` 的 `Vector`。这些在栈上的操作非常快。然而，当我们讨论“分配”时，我们讨论的是堆上的数据。与栈不同的是，堆具有无限制的大小（实际上限是计算机 RAM 的大小），并且可以随意更改、删除和访问任何对象。你可以认为栈像 `Vector`，而堆像 `Dict`。
 
-Intuitively, it may seem obvious that all objects need to be placed in RAM, must be able to be retrieved and deleted at any time by the program, and therefore need to be allocated on the heap. And for some languages, like Python, this is true. However, this is not true in Julia and other efficient, compiled languages. Integers, for example, can often be placed on the stack.
+直观地讲，很明显我们需要将所有的对象放在 RAM 中，并且要让程序随时能够检索和删除对象，因此我们需要将对象都分配在堆上。某些语言，比如 Python，正是这样做的。然而，这不适用于 Julia 以及其他高效的编译型语言。例如，整数类型（Integer）通常放在栈上。
 
-Why do some objects need to be heap allocated, while others can be stack allocated? To be stack-allocated, the compiler needs to know for certain that:
+为什么有的对象需要分配在堆上，而有的对象又需要分配在栈上呢？对于分配在栈上的对象，编译器需要确定的是：
 
-* The object is a reasonably small size, so it fits on the stack. For technical reasons, the stack can't just be hundreds of megabytes in size.
-* The compiler can predict exactly *when* it needs to create and destroy the object so it can destroy it timely by simply popping the stack (similar to calling `pop!` on a `Vector`). This is usually the case for local variables in compiled languages.
+* 对象所占内存应适当地小，因此才能放进栈中。考虑一些技术因素，栈不能只有数百 MB 大小。  
+* 编译器应该能够准确预测对象的创建和销毁时机，因此可以通过简单的弹栈操作来及时销毁对象（类似于调用 `pop!` 函数操作 `Vector`）。编译型语言中的局部变量通常就是这类情形。
 
-Julia has even more constrains on stack-allocated objects.
-* The object should have a fixed size known at compile time.
-* The compiler must know that object never changes. The CPU is free to copy stack-allocated objects, and for immutable objects, there is no way to distinguish a copy from the original. This bears repeating: *With immutable objects, there is no way to distinguish a copy from the original*. This gives the compiler and the CPU certain freedoms when operating on it. The latter point is also why objects are immutable by default in Julia, and leads to one other performance tip: Use immutable objects wherever possible.
+Julia 语言对分配在栈上的对象有更多的限制。
+* 对象的大小固定，且能够在编译时已知。
+* 编译器必须确定对象永不改变。CPU 能够自由复制栈上分配的对象，然而对于不可变对象，我们无法区分原始对象和其副本。这需要重复一遍：**对于不可变对象，我们无法区分原始对象和其副本**。这使得编译器和 CPU 在操作对象时具有确定的自由度。这也就是为什么 Julia 中的对象默认都是不可变的，这引出了一条性能建议：尽可能使用不可变对象。
 
-What does this mean in practice? In Julia, it means if you want fast stack-allocated objects:
-* Your object must be created, used and destroyed in a fully compiled function so the compiler knows for certain when it needs to create, use and destroy the object. If the object is returned for later use (and not immediately returned to another, fully compiled function), we say that the object *escapes*, and must be allocated.
-* Your type must be limited in size. I don't know exactly how large it has to be, but 100 bytes is fine.
-* The exact memory layout of your type must be known by the compiler (it nearly always is).
+实际上这意味着什么呢？在 Julia 中，这意味着如果想要得到快速的栈分配对象，那么需要满足以下条件：
+* 对象应该由完全编译的函数创建、使用和销毁，从而让编译器能够知道创建、使用和销毁该对象的准确时机。如果对象需要返回供以后使用（而不是即刻返回到另一个完全编译的函数），这称为**逃逸**，则需要在内存中分配。
+* 必须限制类型的大小。我不知道到底应该多大，但 100 比特是可以的。
+* 编译器必须（几乎总是）知道类型的准确内存布局。
 """
 
 # ╔═╡ 2a7c1fc6-8af1-11eb-2909-554597aa2949
@@ -467,53 +467,53 @@ begin
 end
 
 # ╔═╡ 2e3304fe-8af1-11eb-0f6a-0f84d58326bf
-md"We can inspect the code needed to instantiate a `HeapAllocated` object with the code needed to instantiate a `StackAllocated` one:"
+md"我们可以分别检查初始化 `HeapAllocated` 对象和 `StackAllocated` 对象的代码："
 
 # ╔═╡ 33350038-8af1-11eb-1ff5-6d42d86491a3
 @code_native debuginfo=:none dump_module=false HeapAllocated(1)
 
 # ╔═╡ 3713a8da-8af1-11eb-2cb2-1957455227d0
-md"Notice the `callq` instruction in the `HeapAllocated` one. This instruction calls out to other functions, meaning that in fact, much more code is really needed to create a `HeapAllocated` object that what is displayed. In constrast, the `StackAllocated` really only needs a few instructions:"
+md"注意上述 `HeapAllocated` 代码中的 `callq` 指令。这条指令调用了另一函数，这实际上意味着需要更多的代码来创建如上所示的 `HeapAllocated` 对象。相反，`StackAllocated` 对象的分配只需要几条指令："
 
 # ╔═╡ 59f58f1c-8af1-11eb-2e88-997e9d4bcc48
 @code_native debuginfo=:none dump_module=false StackAllocated(1)
 
 # ╔═╡ 5c86e276-8af1-11eb-2b2e-3386e6795f37
 md"
-Because immutable objects dont need to be stored on the heap and can be copied freely, immutables are stored *inline* in arrays. This means that immutable objects can be stored directly inside the array's memory. Mutable objects have a unique identity and location on the heap. They are distinguishable from copies, so cannot be freely copied, and so arrays contain reference to the memory location on the heap where they are stored. Accessing such an object from an array then means first accessing the array to get the memory location, and then accessing the object itself using that memory location. Beside the double memory access, objects are stored less efficiently on the heap, meaning that more memory needs to be copied to CPU caches, meaning more cache misses. Hence, even when stored on the heap in an array, immutables can be stored more effectively.
+因为不可变对象不需要存储在堆上，并且可以被自由复制，所以不可变对象串联存储在数组中。这意味着不可变对象可以直接存储在数组的内存中。可变对象则需要在堆上具有唯一的标识符和存储位置。可变对象和其副本间是可分辨的，因此不能自由复制，所以数组内包含的是对其堆上存储位置的引用。从数组访问这类对象的流程是，首先访问数组获得存储位置，然后利用存储位置访问对象本身。除了两次内存访问外，在堆上存储对象也相对低效，因为需要 CPU 缓存拷贝了更多的内存，而这意味着更多的缓存未命中。因此，即使是存储在堆上的数组里，不可变对象的存储也相对更高效。
 "
 
 # ╔═╡ 6849d9ec-8af1-11eb-06d6-db49af4796bc
-md"We can verify that, indeed, the array in the `data_stack` stores the actual data of a `StackAllocated` object, whereas the `data_heap` contains pointers (i.e. memory addresses):"
+md"我们可以验证，实际上，`data_stack` 中的数组存储着 `StackAllocated` 对象的真实数据，而 `data_heap` 保存的是指针（即内存地址）："
 
 # ╔═╡ 74a3ddb4-8af1-11eb-186e-4d80402adfcf
-md"## Registers and SIMD
-It is time yet again to update our simplified computer schematic. A CPU operates only on data present in *registers*. These are small, fixed size slots (e.g. 8 bytes in size) inside the CPU itself. A register is meant to hold one single piece of data, like an integer or a floating point number. As hinted in the section on assembly code, each instruction usually refers to one or two registers which contain the data the operation works on:
+md"## 寄存器与 SIMD
+现在我们要再次更新简化版的计算机模型。CPU 仅能操作**寄存器（registers）**中的数据。寄存器是CPU内大小固定（例如8字节）的小型数据槽（slots）。寄存器用于保存单个数据，比如一个整数或浮点数。正如汇编代码那节所示，每条指令都会引用一个或两个寄存器，其中包含了要操作的数据：
 
 $$[CPU] ↔ [REGISTERS] ↔ [CACHE] ↔ [RAM] ↔ [DISK CACHE] ↔ [DISK]$$
 
-To operate on data structures larger than one register, the data must be broken up into smaller pieces that fits inside the register. For example, when adding two 128-bit integers on my computer:"
+如果要操作大于单个寄存器的数据结构，那么数据必须被拆分成多个寄存器大小的小数据块。例如，当在我的电脑上将两个 128-bit 整数相加时："
 
 # ╔═╡ 7a88c4ba-8af1-11eb-242c-a1813a9e6741
-@code_native debuginfo=:none dump_module=false UInt128(5) + UInt128(11)
+@code_native UInt128(5) + UInt128(11)
 
 # ╔═╡ 7d3fcbd6-8af1-11eb-0441-2f88a9d59966
-md"""There is no register that can do 128-bit additions. First the lower 64 bits must be added using a `addq` instruction, fitting in a register. Then the upper bits are added with a `adcq` instruction, which adds the digits, but also uses the carry bit from the previous instruction. Finally, the results are moved 64 bits at a time using `movq` instructions.
+md"""目前没有寄存器能够直接处理 128-bit 的情况。首先，使用 `addq` 指令将低位的 64 比特加起来，存入一个寄存器。然后，使用 `adcq` 指令计算高位比特的加法，该指令不仅将数组相加，还会使用前一指令的进位比特。最后，使用 `movq` 指令一次将结果移动 64 位。
 
-The small size of the registers serves as a bottleneck for CPU throughput: It can only operate on one integer/float at a time. In order to sidestep this, modern CPUs contain specialized 256-bit registers (or 128-bit in older CPUs, or 512-bit in the brand new ones) than can hold 4 64-bit integers/floats at once, or 8 32-bit integers, etc. Confusingly, the data in such wide registers are termed "vectors." The CPU have access to instructions that can perform various CPU operations on vectors, operating on 4 64-bit integers in one instruction. This is called "single instruction, multiple data," *SIMD*, or *vectorization*. Notably, a 4x64 bit operation is *not* the same as a 256-bit operation, e.g. there is no carry-over with between the 4 64-bit integers when you add two vectors. Instead, a 256-bit vector operation is equivalent to 4 individual 64-bit operations.
+寄存器的小尺寸是 CPU 吞吐量的瓶颈之一：它一次性仅能处理 1 个整数/浮点数。为了避免这类情形，现代 CPU 包含了专用的 256 位寄存器（旧 CPU 为 128 位，最新的 CPU 为 512 位），故能同时处理 4 个 64 位整数/浮点数，或者 8 个 32 位整数/浮点数等等。令人迷惑的是，这类宽寄存器中的数据被称为“向量”。CPU 使用特定的指令对向量实现多种 CPU 操作，即一条指令操作 4 个 64 位整数。这被称为“单指令，多数据（single instruction, multiple data）”， 简称为 **SIMD**，或**向量化**。特别地， 4 个 64 位的操作并不与一个 256 位的操作相同，例如 4 个 64 位整数相加时不存在进位。与之相反，一个 256 位向量的操作等价于 4 个单独的 64 位运算。
 
-We can illustrate this with the following example:"""
+可以通过下面的例子说明这一点："""
 
 # ╔═╡ 8c2ed15a-8af1-11eb-2e96-1df34510e773
 md"""
-Here, two 8×32 bit vectors are added together in one single instruction. You can see the CPU makes use of a single `vpaddd` (vector packed add double) instruction to add 8 32-bit integers, as well as the corresponding move instruction `vmovdqu`. Note that vector CPU instructions begin with `v`.
+在此处代码中，两个 8x32 位的向量使用单条指令相加。可以看到，CPU 使用了单个 `vpaddd` （vector packed add double，矢量聚合双精度加法）指令来对 8 个 32 位整数做加法，对应的移动指令也就是 `vmovdqu`。注意到，向量化的 CPU 指令都以 `v` 开头。
 
-It's worth mentioning the interaction between SIMD and alignment: If a series of 256-bit (32-byte) SIMD loads are misaligned, then up to half the loads could cross cache line boundaries, as opposed to just 1/8th of 8-byte loads. Thus, alignment is a much more serious issue when using SIMD. Since array beginnings are always aligned, this is usually not an issue, but in cases where you are not guaranteed to start from an aligned starting point, such as with matrix operations, this may make a significant difference. In brand new CPUs with 512-bit registers, the issues is even worse as the SIMD size is the same as the cache line size, so *all* loads would be misaligned if the initial load is.
+值得一提的是，SIMD 和内存对齐的相互影响：如果一系列 256 位（ 32 字节） SIMD 加载未对齐，那么可能最多会有一半的加载将跨越缓存线边界，而不是仅为 8 字节的 1/8。因此，在使用 SIMD 时，对齐是一个相当严重的问题。由于数组的起头总是对齐的，所以这对数组通常不是问题。但是，在无法保证从对齐起点开始的情况下，例如矩阵运算，这可能会产生显著的性能差异。在包含 512 位寄存器的最新 CPU 中，问题更为严重，因为 SIMD 大小与缓存线大小相同，因此如果初始的加载存在偏移，则所有的加载都会发生偏移。
 
-SIMD vectorization of e.g. 64-bit integers may increase throughput by almost 4x, so it is of huge importance in high-performance programming. Compilers will automatically vectorize operations if they can. What can prevent this automatic vectorization?
+64 位整数的 SIMD 向量化可以将 CPU 吞吐量提高 4倍，所以此种方法在高性能编程中具有巨大的重要性。编译器会尽其所能地自动向量化操作。那什么可以阻止这种自动向量化呢？
 
-#### SIMD needs uninterrupted iteration of fixed length
-Because vectorized operations operate on multiple data at once, it is not possible to interrupt the loop at an arbitrary point. For example, if 4 64-bit integers are processed in one clock cycle, it is not possible to stop a SIMD loop after 3 integers have been processed. Suppose you had a loop like this:
+#### SIMD 需要不中断的固定长度循环
+因为向量化操作一次处理多条数据，因此不能在任意点中断循环。例如，如果能在 1 个时钟周期内处理4 个 64 位整数，那么不可能在处理了 3 个整数后停止 SIMD 循环。假设你有如下的循环：
 
 ```julia
 for i in 1:8
@@ -524,17 +524,17 @@ for i in 1:8
 end
 ```
 
-Here, the loop could end on any iteration due to the break statement. Therefore, any SIMD instruction which loaded in multiple integers could operate on data *after* the loop is supposed to break, i.e. data which is never supposed to be read. This would be wrong behaviour, and so, the compiler cannot use SIMD instructions.
+由于存在 break 语句，此处的循环能够在任意迭代次数结束。因此，任何加载多个整数的 SIMD 指令都能处理循环中断后的数据，即永远不应被读取的数据。这是错误的行为，并且会导致编译器不能使用 SIMD 指令。
 
-A good rule of thumb is that SIMD needs:
-* A loop with a predetermined length, so it knows when to stop, and
-* A loop with no branches (i.e. if-statements) in the loop
+根据经验来看，SIMD 需要：
+* 循环长度预先指定，因此停止时机可知
+* 以及循环体内不存在分支（即 if 语句）
 
-In fact, even boundschecking, i.e. checking that you are not indexing outside the bounds of a vector, causes a branch. After all, if the code is supposed to raise a bounds error after 3 iterations, even a single SIMD operation would be wrong! To achieve SIMD vectorization then, all boundschecks must be disabled.
+实际上，甚至边界检查，即检查你的索引是否超出向量的边界，都会导致分支。毕竟，如果代码在 3 次迭代后引发越界错误，那么即使是单个 SIMD 指令都会出错！如果要实现 SIMD 向量化，那么所有的边界检查都应该被禁止掉。
 
-Fortunately, in the latest versions of Julia, the compiler has been pretty smart at figuring out when it can SIMD even when boundschecking.
+幸运的是，在最新版本的 Julia 中，编译器已经聪明到可以指出能够 SIMD 的时机，即使存在边界检查也可以。 
 
-To demonstrate the significant impact of SIMDd, we can use a function that uses an input function to break a loop. We can then compare the speed of the function when given a function that the compiler knows will never break the loop and so can SIMDd, with a function that might break the loop."""
+为了说明 SIMD 的影响，我们可以使用一个输入函来中断循环。然后比较两函数的速度，一个是可能中断循环的函数，另一个是编译器知道不存在循环中断并以SIMD方式执行的函数。"""
 
 # ╔═╡ 94182f88-8af1-11eb-207a-37083c1ead68
 begin
@@ -553,20 +553,20 @@ end;
 
 # ╔═╡ aa3931fc-8af1-11eb-2f42-f582b8e639ad
 md"""
-On my computer, the SIMD code is 10x faster than the non-SIMD code. SIMD alone accounts for only about 4x improvements (since we moved from 64-bits per iteration to 256 bits per iteration). The rest of the gain comes from not spending time checking the bounds and from automatic loop unrolling (explained later), which is also made possible by the `@inbounds` annotation.
+在我的电脑上， SIMD 版本的代码要比非 SIMD 版本的代码快上 10 倍。单凭 SIMD 能提供约 4 倍的性能提升（因为我们将每次迭代 64 位提升到了每次迭代 256 位）。其余的提升来自于未耗时做边界检查和自动循环展开（后续将说明），这都是通过 `@inbounds` 实现的。
 
-#### SIMD needs a loop where loop order doesn't matter
-SIMD can change the order in which elements in an array is processed. If the result of any iteration depends on any previous iteration such that the elements can't be re-ordered, the compiler will usually not SIMD-vectorize. Often when a loop won't auto-vectorize, it's due to subtleties in which data moves around in registers means that there will be some hidden memory dependency between elements in an array.
+#### SIMD 需要顺序无关的循环
+SIMD 能够改变数组元素的处理顺序。如果任何的迭代依赖于任何的先前迭代，那么元素不能够被重新排序，编译器通常也就不会进行 SIMD 向量化。通常，不能对循环自动向量化是由于一些数据在寄存器中移动的细微差别，即数组元素间存在某些隐藏的内存依赖关系。
 
-Imagine we want to sum some 64-bit integers in an array using SIMD. For simplicity, let's say the array has 8 elements, `A`, `B`, `C` ... `H`. In an ordinary non-SIMD loop, the additions would be done like so:
+想象需要使用 SIMD 对数组中的一些 64 位整数求和。简单起见，我们使数组只有 8 个元素，`A`，`B`，`C` ... `H`。在通常的非 SIMD 循环中，加法将像下面这样完成：
 
 $$(((((((A + B) + C) + D) + E) + F) + G) + H)$$
 
-Whereas when loading the integers using SIMD, four 64-bit integers would be loaded into one vector `<A, B, C, D>`, and the other four into another `<E, F, G, H>`. The two vectors would be added: `<A+E, B+F, C+G, D+H>`. After the loop, the four integers in the resulting vector would be added. So the overall order would be:
+而当使用 SIMD 加载整数时，四个 64 位整数将被加载到一个向量 `<A, B, C, D>`，另外四个整数加载到另一个向量 `<E, F, G, H>`。然后将两个向量相加：`<A+E, B+F, C+G, D+H>`。循环完成后，将结果向量中的四个整数加起来。所以，总的顺序如下：
 
 $$((((A + E) + (B + F)) + (C + G)) + (D + H))$$
 
-Perhaps surprisingly, addition of floating point numbers can give different results depending on the order (i.e. float addition is not associative):
+也许令人惊讶的是，浮点数加法可以根据顺序给出不同的结果（即浮点数加法不满足结合律）：
 """
 
 # ╔═╡ c01bf4b6-8af1-11eb-2f17-bfe0c93d48f9
@@ -576,10 +576,10 @@ begin
 end
 
 # ╔═╡ c80e05ba-8af1-11eb-20fc-235b45f2eb4b
-md"for this reason, float addition will not auto-vectorize:"
+md"因此，不会对浮点数加法自动向量化:"
 
 # ╔═╡ e3931226-8af1-11eb-0da5-fb3c1c22d12e
-md"However, high-performance programming languages usually provide a command to tell the compiler it's alright to re-order the loop, even for non-associative loops. In Julia, this command is the `@simd` macro:"
+md"然而，高性能编程语言通常会提供一条命令来告诉编译器，即使对于不满足交换律的循环也可以重排循环。在 Julia 中， 这条命令是 `@simd` 宏："
 
 # ╔═╡ e793e300-8af1-11eb-2c89-e7bc1be249f0
 function sum_simd(x::Vector)
@@ -593,22 +593,22 @@ end;
 
 # ╔═╡ f0a4cb58-8af1-11eb-054c-03192285b5e2
 md"""
-Julia also provides the macro `@simd ivdep` which further tells the compiler that there are no memory-dependencies in the loop order. However, I *strongly discourage* the use of this macro, unless you *really* know what you're doing. In general, the compiler knows best when a loop has memory dependencies, and misuse of `@simd ivdep` can very easily lead to bugs that are hard to detect.
+Julia 还提供了 `@simd ivdep` 宏，它进一步告诉编译器循环顺序不存在内存依赖性。然而，我**强烈地不建议**使用此宏，除非你**真的**知道自己在做什么。一般来说，编译器最能知道何时循环会存在内存依赖性，而 `@simd ivdep` 宏的滥用可能会很容易导致难以排查的 bug。
 """
 
 # ╔═╡ f5c28c92-8af1-11eb-318f-5fa059d8fd80
 md"""
-## Struct of arrays
-If we create an array containing four `AlignmentTest` objects `A`, `B`, `C` and `D`, the objects will lie end to end in the array, like this:
+## 数组结构体
+如果创造一个数组，其中包含四个 `AlignmentTest` 对象 `A`、`B`、`C` 和 `D`，对象将会在数组中首尾相接，如下所示：
 
-    Objects: |      A        |       B       |       C       |        D      |
-    Fields:  |   a   | b |c| |   a   | b |c| |   a   | b |c| |   a   | b |c| |
-    Byte:     1               9              17              25              33
+    对象:  |      A        |       B       |       C       |        D      |
+    字段:  |   a   | b |c| |   a   | b |c| |   a   | b |c| |   a   | b |c| |
+    字节:   1               9              17              25              33
 
-Note again that byte no. 8, 16, 24 and 32 are empty to preserve alignment, wasting memory.
-Now suppose you want to do an operation on all the `.a` fields of the structs. Because the `.a` fields are scattered 8 bytes apart, SIMD operations are much less efficient (loading up to 4 fields at a time) than if all the `.a` fields were stored together (where 8 fields could fit in a 256-bit register). When working with the `.a` fields only, the entire 64-byte cache lines would be read in, of which only half, or 32 bytes would be useful. Not only does this cause more cache misses, we also need instructions to pick out the half of the data from the SIMD registers we need.
+再次注意，为了保持对齐，第8、16、24 和 32 字节是空闲的，这就会浪费内存。
+现在假设要对所有结构体的 ".a" 字段执行操作。由于两 ".a" 字段相隔8字节，因此 SIMD 操作的效率（一次最多加载4个字段）远低于所有 `.a` 存储在一起的情形（8个字段刚好可以存入 256 位寄存器）。当仅使用 ".a" 字段时，我们会读取全部的 64 字节缓存线，但其中只有一半即 32 字节有用。这不仅会导致更多的缓存未命中，而且还需要用指令来从 SIMD 寄存器中提取一半的数据。
 
-The memory structure we have above is termed an "array of structs," because, well, it is an array filled with structs. Instead we can strucure our 4 objects `A` to `D` as a "struct of arrays." Conceptually, it could look like:
+上面的内存结构被称为“结构体数组”，因为它是一个由结构体组成的数组。相反，我们可以将4个对象 "A" 到 "D" 构造为 "数组结构体"。根据概念，它看起来像是：
 """
 
 # ╔═╡ fc2d2f1a-8af1-11eb-11a4-8700f94e866e
@@ -620,14 +620,14 @@ end
 
 # ╔═╡ 007cd39a-8af2-11eb-053d-f584d68f7d2f
 md"""
-With the following memory layout for each field:
+每个字段的内存布局如下：
 
-    Object: AlignmentTestVector
+    对象: AlignmentTestVector
     .a |   A   |   B   |   C   |   D   |
     .b | A | B | C | D |
     .c |A|B|C|D|
 
-Alignment is no longer a problem, no space is wasted on padding. When running through all the `a` fields, all cache lines contain full 64 bytes of relevant data, so SIMD operations do not need extra operations to pick out the relevant data:
+内存对齐不再是问题，不会浪费任何空间用于填充。当遍历操作所有 ".a" 字段时，所有缓存线包含全部 64 字节的相关数据，因此 SIMD 不需要额外的操作来提取相关数据：
 """
 
 # ╔═╡ 72fbb3ec-8ee8-11eb-3836-11092ef74e86
@@ -823,17 +823,17 @@ end
 
 # ╔═╡ 0dfc5054-8af2-11eb-098d-35f4e69ae544
 md"""
-## Specialized CPU instructions
+## 专用 CPU 指令
 
-Most code makes use of only a score of simple CPU instructions like move, add, multiply, bitshift, and, or, xor, jumps, and so on. However, CPUs in the typical modern laptop support a *lot* of CPU instructions. Usually, if an operation is used heavily in consumer laptops, CPU manufacturers will add specialized instructions to speed up these operations. Depending on the hardware implementation of the instructions, the speed gain from using these instructions can be significant.
+大多数代码只会使用一些简单的 CPU 指令，例如 move、add、multiply、bitshift、and、or、xor、jump 等等。然而，典型现代笔记本电脑中的 CPU 支持 **大量** 的 CPU 指令。通常，如果某个指令在消费者的电脑中频繁用到，那么 CPU 制造商将会添加专用的指令来加速这些操作。凭借指令的硬件层级实现，使用专用指令获得的加速效果非常显著。
 
-Julia only exposes a few specialized instructions, including:
+Julia仅支持一小部分专用指令，包括：
 
-* The number of set bits in an integer is effectively counted with the `popcnt` instruction, exposed via the `count_ones` function.
-* The `tzcnt` instructions counts the number of trailing zeros in the bits an integer, exposed via the `trailing_zeros` function
-* The order of individual bytes in a multi-byte integer can be reversed using the `bswap` instruction, exposed via the `bswap` function. This can be useful when having to deal with [endianness](https://en.wikipedia.org/wiki/Endianness).
+* 通过 `popcnt` 指令对整数中的 set bits 进行高效计数，对应的函数为 `count_ones`。
+* 通过 `tzcnt` 指令统计整数中 trailing zeros 的数目，对应的函数为 `trailing_zeros` 。
+* 通过 `bswap` 指令反转多字节整数中各字节的顺序，对应的函数为 `bswap`。此函数在处理[端序](https://en.wikipedia.org/wiki/Endianness)时很有用。
 
-The following example illustrates the performance difference between a manual implementation of the `count_ones` function, and the built-in version, which uses the `popcnt` instruction:
+下面的例子展现了手动实现的 `count_ones` 函数和使用内置版 `popcnt` 指令之间的性能差异：
 """
 
 # ╔═╡ 126300a2-8af2-11eb-00ea-e76a979aef45
@@ -856,12 +856,12 @@ end
 
 # ╔═╡ 1e7edfdc-8af2-11eb-1429-4d4220bad0f0
 md"""
-The timings you observe here will depend on whether your compiler is clever enough to realize that the computation in the first function can be expressed as a `popcnt` instruction, and thus will be compiled to that. On my computer, the compiler is not able to make that inference, and the second function achieves the same result more than 100x faster.
+此处观察到的时间取决于编译器是否足够聪明，从而明白第一个函数中的计算能被表示为 `popcnt` 指令，并将此函数编译为该指令。在我的电脑上，编译器不能够实现这样的推断，因此在实现相同效果的情况下，第二个函数要快100倍。 
 
-#### Call any CPU instruction
-Julia makes it possible to call CPU instructions direcly. This is not generally advised, since not all your users will have access to the same CPU with the same instructions, and so your code will crash on users working on computers of different brands.
+#### 调用任意 CPU 指令
+Julia 能够直接调用 CPU 指令。通常不建议这样做，因为不是所有的用户能够使用相同的指令来访问相同的 CPU，所以当运行在不同品牌的电脑上时代码将会崩溃。
 
-The latest CPUs contain specialized instructions for AES encryption and SHA256 hashing. If you wish to call these instructions, you can call Julia's backend compiler, LLVM, directly. In the example below, I create a function which calls the `vaesenc` (one round of AES encryption) instruction directly:
+最新的 CPU 包含 AES 加密和 SHA256 哈希的专用指令。如果你想调用这些指令，那么可以直接调用 Julia 的编译器后端 LLVM。下面的例子创建了一个直接调用 `vaesenc` （一轮AES加密）指令的函数：
 """
 
 # ╔═╡ 25a47c54-8af2-11eb-270a-5b58c3aafe6e
@@ -877,7 +877,7 @@ begin
 end;
 
 # ╔═╡ 2dc4f936-8af2-11eb-1117-9bc10e619ec6
-md"(Thanks to Kristoffer Carlsson for [the example](http://kristofferc.github.io/post/intrinsics/)). We can verify it works by checking the assembly of the function, which should contain only a single `vaesenc` instruction, as well as the `retq` (return) and the `nopw` (do nothing, used as a filler to align the CPU instructions in memory) instruction:"
+md"（感谢 Kristoffer Carlsson 提供的[例子](http://kristofferc.github.io/post/intrinsics/) ）。我们可通过检查函数的汇编码来验证它是有效的，即汇编码只包含一条 `vaesenc` 指令及 `retq` 与 `nopw` 指令（后两条指令不进行任何操作，仅用于填充以使CPU中的指令对齐）："
 
 # ╔═╡ 76a4e83c-8af2-11eb-16d7-75eaabcb21b6
 @code_native debuginfo=:none dump_module=false aesenc(
@@ -885,20 +885,20 @@ md"(Thanks to Kristoffer Carlsson for [the example](http://kristofferc.github.io
 )
 
 # ╔═╡ 797264de-8af2-11eb-0cb0-adf3fbc95c90
-md"""Algorithms which makes use of specialized instructions can be extremely fast. [In a blog post](https://mollyrocket.com/meowhash), the video game company Molly Rocket unveiled a new non-cryptographic hash function using AES instructions which reached unprecedented speeds."""
+md"""使用专用指令的算法能够非常快。[在一篇博客中](https://mollyrocket.com/meowhash)，电子游戏公司 Molly Rocket 推出了一种用于 AES 指令的新型非加密哈希函数，从而获得了前所未有的速度。"""
 
 # ╔═╡ 80179748-8af2-11eb-0910-2b825104159d
-md"## Inlining
-Consider the assembly of this function:"
+md"## 内联
+考虑此函数的汇编码："
 
 # ╔═╡ 36b723fc-8ee9-11eb-1b92-451b992acc0c
 f() = error();
 
 # ╔═╡ 8af63980-8af2-11eb-3028-83a935bac0db
 md"""
-This code contains the `callq` instruction, which calls another function. A function call comes with some overhead depending on the arguments of the function and other things. While the time spent on a function call is measured in nanoseconds, it can add up if the function called is in a tight loop.
+此段代码包含用于调用其他函数的 `callq` 指令。 函数调用会产生一些开销，其取决于函数的参数与其他内容。虽然函数调用的耗时在 ns 数量级，但是若在小循环中调用函数，时间则会累加。 
 
-However, if we show the assembly of this function:
+然而，如果我们查看如下函数的的汇编码：
 """
 
 # ╔═╡ 50ab0cf6-8ee9-11eb-3e04-af5fef7f2850
@@ -909,20 +909,20 @@ call_plus(x) = x + 1;
 
 # ╔═╡ a105bd68-8af2-11eb-31f6-3335b4fb0f08
 md"""
-The function `call_plus` calls `+`, and is compiled to a single `leaq` instruction (as well as some filler `retq` and `nopw`). But `+` is a normal Julia function, so `call_plus` is an example of one regular Julia function calling another. Why is there no `callq` instruction to call `+`?
+`call_plus` 函数调用了 `+`，并被编译为单条 `leaq` 指令（也包含 `retq` 与 `nopw`）。但是 `+` 是一般的 Julia 函数，因此 `call_plus`是一个常规 Julia 函数调用另一个函数的例子。那为什么未使用 `callq` 指令来调用 `+`？   
 
-The compiler has chosen to *inline* the function `+` into `call_plus`. That means that instead of calling `+`, it has copied the *content* of `+` directly into `call_plus`. The advantages of this is:
-* There is no overhead from the function call
-* There is no need to construct a `Tuple` to hold the arguments of the `+` function
-* Whatever computations happens in `+` is compiled together with `call_plus`, allowing the compiler to use information from one in the other and possibly simplify some calculations.
+因为，编译已经选择将 `+` 函数**内联**进 `call_plus` 函数。这表明函数不是调用`+`， 而是已经将 `+` 的**内容**直接复制进了 `call_plus`。这样做的好处有：
+* 没有函数调用产生的开销
+* 不需要构造 `Tuple` 来接收 `+` 函数的参数
+* 发生在 `+` 中的任何计算都与 `call_plus` 一起编译，这使得编译器能够结合利用两函数的信息以简化某些计算。 
 
-So why aren't *all* functions inlined then? Inlining copies code, increases the size of it and consuming RAM. Furthermore, the *CPU instructions themselves* also needs to fit into the CPU cache (although CPU instructions have their own cache) in order to be efficiently retrieved. If everything was inlined, programs would be enormous and grind to a halt. Inlining is only an improvement if the inlined function is small.
+那么为什么不将**所有**函数内联起来呢？因为，内联复制代码的操作既增加了代码的体积又消耗了内存。另外，为了能被高效地检索，**CPU 指令本身**也需能放进 CPU 缓存（尽管 CPU 指令有自己的缓存）。如果一切都是内联的，那么程序将会拥有非常庞大的体积并陷入瘫痪。仅当内联函数很小时，内联操作才会是提升。
 
-Instead, the compiler uses heuristics (rules of thumb) to determine when a function is small enough for inlining to increase performance. These heuristics are not bulletproof, so Julia provides the macros `@noinline`, which prevents inlining of small functions (useful for e.g. functions that raises errors, which must be assumed to be called rarely), and `@inline`, which does not *force* the compiler to inline, but *strongly suggests* to the compiler that it ought to inline the function.
+相反，编译器使用启发式方法（经验法则）来确定函数何时足够小，以便内联能够提高性能。这些启发式方法并非万无一失，因此 Julia 提供了 `@noinline` 宏，它能够阻止小函数的内联（例如，对于引发错误的函数很有用，必须假设不常调用）；以及 `@inline` 宏， 它不会**强制**编译器进行内联，但会**强烈地建议**编译器应该内联此函数。
 
-If code contains a time-sensitive section, for example an inner loop, it is important to look at the assembly code to verify that small functions in the loop is inlined. For example, in [this line in my kmer hashing code](https://github.com/jakobnissen/Kash.jl/blob/b9a6e71acf9651d3614f92d5d4b29ffd136bcb5c/src/kmersketch.jl#L41), overall minhashing performance drops by a factor of two if this `@inline` annotation is removed.
+如果代码包含时间敏感的部分，比如内循环，那么查看汇编码就变得非常重要，即通过汇编码验证循环中的小函数是否是内联的。例如，在[我的 kmer 哈希代码的这行](https://github.com/jakobnissen/Kash.jl/blob/b9a6e71acf9651d3614f92d5d4b29ffd136bcb5c/src/kmersketch.jl#L41) 中，若去除 `@inline` 标注，minhashing 的总体性能将会下降一半。
 
-An extreme difference between inlining and no inlining can be demonstrated thus:
+以下方式证明了内联和无内联函数版本间的极端性能差异：
 """
 
 # ╔═╡ a843a0c2-8af2-11eb-2435-17e2c36ec253
@@ -949,8 +949,8 @@ end
 
 # ╔═╡ bc0a2f22-8af2-11eb-3803-f54f84ddfc46
 md"""
-## Unrolling
-Consider a function that sums a vector of 64-bit integers. If the vector's data's memory offset is stored in register `%r9`, the length of the vector is stored in register `%r8`, the current index of the vector in `%rcx` and the running total in `%rax`, the assembly of the inner loop could look like this:
+## 展开
+考虑一个对64位整数向量求和的函数。如果向量数据的内存偏移存储在寄存器 `%r9`，向量的长度存储在寄存器 `%r8`，向量当前元素的索引存储在 `%rcx`，以及使用 `%rax` 遍历计算向量所有元素，那么内循环的汇编码就像下面这样：
 
 ```
 L1:
@@ -967,9 +967,9 @@ L1:
     jb     L1
 ```
 
-For a total of 4 instructions per element of the vector. The actual code generated by Julia will be similar to this, but also incluce extra instructions related to bounds checking that are not relevant here (and of course will include different comments).
+每个向量元素对应 4 条指令。Julia 生成的汇编码与此相似，但是还应该包含与边界检查有关的的指令。不过这些指令与本节无关（但应包含不同的注解）。
 
-However, if the function is written like this:
+然而，如果函数写作下面这样：
 
 ```julia
 function sum_vector(v::Vector{Int})
@@ -986,7 +986,7 @@ function sum_vector(v::Vector{Int})
 end
 ```
 
-The result is obviously the same if we assume the length of the vector is divisible by four. If the length is not divisible by four, we could simply use the function above to sum the first $N - rem(N, 4)$ elements and add the last few elements in another loop. Despite the functionally identical result, the assembly of the loop is different and may look something like:
+如果假设向量长度刚好能被4整除，那么结果显然一致。若长度不能被4整除，我们很容易先使用此函数求和向量的前 $N - rem(N, 4)$ 元素，然后在另一循环求和剩余元素。尽管两种函数的结果相同，但是两种循环对应的汇编码却不同，后者看起来是：
 
 ```
 L1:
@@ -999,7 +999,7 @@ L1:
     jb     L1
 ```
 
-For a total of 7 instructions per 4 additions, or 1.75 instructions per addition. This is less than half the number of instructions per integer! The speed gain comes from simply checking less often when we're at the end of the loop. We call this process *unrolling* the loop, here by a factor of four. Naturally, unrolling can only be done if we know the number of iterations beforehand, so we don't "overshoot" the number of iterations. Often, the compiler will unroll loops automatically for extra performance, but it can be worth looking at the assembly. For example, this is the assembly for the innermost loop generated on my computer for `sum([1])`:
+每 4 个条件共使用 7 条指令，或者说每个条件使用 1.75 条指令。这少于每个整数所使用指令的一半！性能加速来自于循环末尾检查次数的减少。我们称此过程为**展开**（Unrolling）循环，在此例中即为除以4。当然，展开只有在提前知道循环次数时可行，因此不会过多执行迭代。通常，编译器会自动展开循环以获得额外的性能，但是汇编码也是值得看一看的。例如，这是在我的电脑上为最内层循环的 `sum([1])` 生成的汇编码：
 
     L144:
         vpaddq  16(%rcx,%rax,8), %ymm0, %ymm0
@@ -1010,11 +1010,11 @@ For a total of 7 instructions per 4 additions, or 1.75 instructions per addition
         cmpq    %rax, %rdi
         jne L144
 
-Where you can see it is both unrolled by a factor of four, and uses 256-bit SIMD instructions, for a total of 128 bytes, 16 integers added per iteration, or 0.44 instructions per integer.
+此处可以看到，不仅以4为因数展开，而且使用了 256 位 SIMD 指令，总共 128 比特，每次迭代相加16个整数，或者说每个整数平均使用 0.44 条指令。
 
-Notice also that the compiler chooses to use 4 different `ymm` SIMD registers, `ymm0` to `ymm3`, whereas in my example assembly code, I just used one register `rax`. This is because, if you use 4 independent registers, then you don't need to wait for one `vpaddq` to complete (remember, it had a ~3 clock cycle latency) before the CPU can begin the next.
+同时注意到，编译器使用了 4 个不同的 `ymm` SIMD 寄存器，`ymm0` 到 `ymm3`， 而我所示例的汇编码只使用了一个寄存器 `rax`。这是因为，如果使用4个独立的寄存器，那么在 CPU 执行下一次操作时不需要等待 `vpaddq` 操作完成（记住，它有 ~3 时钟周期的延迟）。
 
-The story for unrolling is similar to that for SIMD: The compiler will only unroll a loop if it can tell _for sure_ that it will not overshoot the number of iterations. For example, compare the two following functions:
+展开的情况与SIMD类似：只有在**确定**不会超出迭代次数时，编译器才会展开循环。例如，比较如下两函数：
 """
 
 # ╔═╡ f0bc1fdc-8ee9-11eb-2916-d71e1cf36375
@@ -1035,9 +1035,9 @@ end
 
 # ╔═╡ 36a2872e-8eeb-11eb-0999-4153ced71678
 md"""
-The _first_ function stops and returns as soon as it finds a `true` value - but this break in the loop disables SIMD and unrolling. The _second_ function continues throughout the entire array, even if the very first value is `true`. While this enables SIMD and unrolling, it's obviously wasteful if it sees a `true` right in the beginning. Hence, the first is better when we expect to see the first `true` before around 1/4th of the way though the array, the latter better otherwise.
+第一个函数只要发现一个 `true` 值就会停下并返回 —— 但循环中断禁止了 SIMD 与展开。 第二个函数会持续遍历整个数组，即使第一个值为 `true`。尽管这种方法允许了 SIMD 与展开，但是若 `true` 值在非常靠前的位置，这也就显然会存在性能浪费。因此，当我们期望在数组的前 1/4 发现第一个 `true` 值时，第一个函数更好，否则后者更好。 
 
-We can create a compromise by manually unrolling. In the functions below, `check128` checks 128 entries using `inbounds`, without stopping underway to check if it's found a `true`, and is thus unrolled and SIMDd. `unroll_compromise` then uses `check128`, but breaks out of the loop as soon as it finds a `true.`
+我们还可以创建基于手动展开的折中方案。在下面的函数中，`check128` 使用 `inbounds` 检查 128 元素，而不是停下来检查是否找到 `true` 值，故此函数允许 SIMD 与展开。 然后 `unroll_compromise` 调用 `check128`， 只要找到 `true` 值就跳出循环。
 """
 
 # ╔═╡ 9ca70cfc-8eeb-11eb-361b-b929089ca109
@@ -1075,23 +1075,23 @@ end
 
 # ╔═╡ 270950ac-8eed-11eb-365d-df9d36d090bc
 md"""
-We see excellent performance for both arrays with no `trues`, and for the one with a `true` right in the beginning.
+可以看到，当数组无 `true` 和 `true` 非常靠前时，函数拥有极好的性能。
 
-Unfortunately, I'm not aware of any way to automatically generate this kind of unrolling, where you want a compromise between unrolling smaller chunks, and including branches in between each chunk. Perhaps in the future, this desire can be communicated to the compiler, such that the optimal code is automatically generated.
+不幸的是，当我们想要在展开较小数据块和迭代不同数据块间做出折中时，我想不到什么方法可以自动生成这种展开。也许将来，这种想法能够交给编译器，让编译器能够自动生成这种优化过的代码。
 """
 
 # ╔═╡ c36dc5f8-8af2-11eb-3f35-fb86143a54d2
 md"""
-## Avoid unpredicable branches
-As mentioned previously, CPU instructions take multiple cycles to complete, but may be queued into the CPU before the previous instruction has finished computing. So what happens when the CPU encounters a branch (i.e. a jump instruction)? It can't know which instruction to queue next, because that depends on the instruction that it just put into the queue and which has yet to be executed.
+## 避免不可预测的分支
+如前所述，CPU 指令需要花费多个时钟周期，但可能要在前面的指令完成计算前放入队列。那么当 CPU 遇到分支时会发生什么（例如，跳转指令）？它会不知道接下来将哪条指令放入队列，因为这取决于前面刚刚放入队列的指令以及那些还未执行的指令。
 
-Modern CPUs make use of *branch prediction*. The CPU has a *branch predictor* circuit, which guesses the correct branch based on which branches were recently taken. In essense, the branch predictor attempts to learn simple patterns in which branches are taken in code, while the code is running. After queueing a branch, the CPU immediately queues instructions from whatever branch predicted by the branch predictor. The correctness of the guess is verified later, when the queued branch is being executed. If the guess was correct, great, the CPU saved time by guessing. If not, the CPU has to empty the pipeline and discard all computations since the initial guess, and then start over. This process causes a delay of a few nanoseconds.
+现代 CPU 会使用 **分支预测**。 CPU 中有一个 **分支预测器** 电路，它能够基于最近选择的分支猜测接下来的正确分支。实际上，当代码运行时，分支预测器会尝试从代码中已执行的分支中学习一些简单模式。在将之前的分支放入队列后，CPU 立即将分支预测器预测的所有分支的指令放入队列。然后在执行队列中的分支时验证猜测的正确性。如果猜测正确，这很棒，CPU 借助猜测节省了时间。如果猜测错误， 那么 CPU 不得不清空计算管道，并丢弃自最初的猜测开始以来的所有计算过程。这个过程会导致大约几纳秒的延迟。
 
-For the programmer, this means that the speed of an if-statement depends on how easy it is to guess. If it is trivially easy to guess, the branch predictor will be correct almost all the time, and the if statement will take no longer than a simple instruction, typically 1 clock cycle. In a situation where the branching is random, it will be wrong about 50% of the time, and each misprediction may cost many clock cycles.
+对于程序员来说，这意味着 if 语句的速度取决于它的分支有多容易被猜测。如果非常容易猜测，那么分支预测器将几乎一直是正确的，同时 if 语句将只需要 1 条指令，一般为 1 时钟周期。在分支完全随机的情形中，它将在整个过程中大约具有 50% 的正确率，同时每次错误预测都会导致消耗很多时钟周期。
 
-Branches caused by loops are among the easiest to guess. If you have a loop with 1000 elements, the code will loop back 999 times and break out of the loop just once. Hence the branch predictor can simply always predict "loop back", and get a 99.9% accuracy.
+循环中的分支是最容易猜测的。如果有一个迭代 1000 元素的循环，代码循环 999 次而只返回 1 次。因此分支预测器通常能简单地预测为 “循环”，并且有 99.9% 的准确率。
 
-We can demonstrate the performance of branch misprediction with a simple function:
+可以使用如下的简单函数演示分支预测错误的性能：
 """
 
 # ╔═╡ c96f7f50-8af2-11eb-0513-d538cf6bc619
@@ -1120,9 +1120,9 @@ end
 
 # ╔═╡ d53422a0-8af2-11eb-0417-b9740c4a571c
 md"""
-In the first case, the integers are random, and about half the branches will be mispredicted causing delays. In the second case, the branch is always taken, the branch predictor is quickly able to pick up the pattern and will reach near 100% correct prediction. As a result, on my computer, the latter is around 8x faster.
+在第一个例子中，整数是随机的，并且大约一半的分支预测错误从而引起延迟。在第二个例子中，总是选择该分支，分支预测器能够迅速习得预测模式，并将具有接近 100% 的预测正确率。因此，在我的电脑上，后者大约快 8 倍。
 
-Note that if you use smaller vectors and repeat the computation many times, as the `@btime` macro does, the branch predictor is able to learn the pattern of the small random vectors by heart, and will reach much better than random prediction. This is especially pronounced in the most modern CPUs (and in particular the CPUs sold by AMD, I hear) where the branch predictors have gotten much better. This "learning by heart" is an artifact of the loop in the benchmarking process. You would not expect to run the exact same computation repeatedly on real-life data:
+要注意的是，若你使用更小的向量并多次重复计算，就像 `@btime` 做的那样，那么分支预测器将能通过记忆学习小向量的模式，并取得比随机预测更好的性能。这在现代 CPU （我听说特别是 AMD 出售的 CPU）中特别明显，因为它们的分支预测器做得更好。这种 “记忆学习” 模式是基准测试过程中循环的产物。你不会期望对真实数据重复执行完全相同的计算：
 """
 
 # ╔═╡ dc5b9bbc-8af2-11eb-0197-9b5da5087f0d
@@ -1138,9 +1138,9 @@ end
 
 # ╔═╡ e735a302-8af2-11eb-2ce7-01435b60fdd9
 md"""
-Because branches are very fast if they are predicted correctly, highly predictable branches caused by error checks are not of much performance concern, assuming that the code essensially never errors. Hence a branch like bounds checking is very fast. You should only remove bounds checks if absolutely maximal performance is critical, or if the bounds check happens in a loop which would otherwise SIMD-vectorize.
+若预测正确，这些分支会非常快。假设代码本质上不存在错误，那么错误检查引起的高可预测性分支不会带来太多的性能损失。因此边界检查这样的分支会非常快。然而，只有获得最佳性能非常重要时，或者出现在可 SIMD 向量化的循环中，边界检查才应该被去除。
 
-If branches cannot be easily predicted, it is often possible to re-phrase the function to avoid branches all together. For example, in the `copy_odds!` example above, we could instead write it like so:
+若分支不能简单地预测，那么通常应该改写代码以避免所有的分支。例如，对于上面的`copy_odds!` 函数例子，可以像下面这样改写：
 """
 
 # ╔═╡ eb158e60-8af2-11eb-2227-59d6404e3335
@@ -1166,20 +1166,20 @@ end
 
 # ╔═╡ f969eed2-8af2-11eb-1e78-5b322a7f4ebd
 md"""
-Which contains no other branches than the one caused by the loop itself (which is easily predictable), and results in speeds slightly worse than the perfectly predicted one, but much better for random data.
+上述代码除了一个由循环本身引起的分支（容易预测）外不含任何分支。另外，速度上稍差于完美预测的情况，但是比随机数据要好很多。
 
-The compiler will often remove branches in your code when the same computation can be done using other instructions. When the compiler fails to do so, Julia offers the `ifelse` function, which sometimes can help elide branching.
+当可以使用其他指令执行相同的计算时，编译器通常会移除分支。若编译器不能做到这一点，Julia 提供的 `ifelse` 函数有时也能帮助删除分支。
 """
 
 # ╔═╡ 72e1b146-8c1c-11eb-2c56-b1342271c2f6
 md"""
-## Be aware of memory dependencies
+## 注意内存依赖
 
-Thinking about it more deeply, why *is* the perfectly predicted example above faster than the solution that avoids having that extra branch there at all?
+考虑更深一点，上面完美预测的例子 **为什么** 比完全避免了额外分支的解决方法还要快?
 
-Let's look at the assembly code. Here, I've just cut out the assembly for the loop (since almost all time is spent there)
+我们来看一下汇编码。此处只展示了循环部分的汇编码（因为几乎所有的时间都花费在此）
 
-For the branch-ful version, we have:
+对于多分支的版本，我们有：
 ```julia
 1 L48:
 2     incq	%rsi
@@ -1194,7 +1194,7 @@ For the branch-ful version, we have:
 11	jmp	L48
 ```
 
-And for the branch-less, we have:
+对于少分支的版本，我们有：
 ```julia
 1 L48:
 2	movq	(%r9,%rcx,8), %rdx
@@ -1206,29 +1206,29 @@ And for the branch-less, we have:
 8	jne	L48
 ```
 
-The branch-ful executes 9 instructions per iteration (remember, all iterations had uneven numbers), whereas the branch-less executes only 7. Looking at the table for how long instructions take, you will find all these instructions are fast. So what gives?
+多分支版本每次迭代执行 9 条指令（记住，所有的迭代都是无规律的数），而少分支版本每次只执行 7 条指令。查看指令耗时的表格，你就会发现这些指令都很快。那么这是什么呢？
 
-To understand what is happening, we need to go a little deeper into the CPU. In fact, the CPU does not execute CPU instructions in a linear fashion as the assembly code would have you believe. Instead, a more accurate (but still simplified) picture is the following:
+为了理解发生了什么，我们需要研究 CPU 的更深层次。实际上，CPU 不会像汇编码那样以线性顺序执行这些 CPU 指令。反而，一个更精确（但仍做简化）的流程如下：
 
-1. The CPU reads in CPU instructions. It then on-the-fly translates these CPU instructions to a set of even lower-level instructions called _micro-operations_ or _µops_. The important difference between µops and CPU instructions is that while only a few different registers can be referred to by the instructions, the actual processor has many more registers, which can be addressed by µops. Code written with µops is called _microcode_.
+1. CPU 读入所有的 CPU 指令。然后立即将这些 CPU 指令翻译为更低级的指令，它们被称为 _micro-operations_ 或 _µops_。 µops 和 CPU 指令的重要区别是 CPU 指令只能引用少数几个不同的寄存器，然而真实的处理器拥有更多的寄存器，这些寄存器可以被 µops 访问。使用 µops 编写的代码称为**微指令**（microcode）。
 
-2. This microcode is loaded into an internal array called the *reorder buffer* for storage. A CPU may hold more than 200 instructions in the reorder buffer at a time. The purpose of this storage is to allow execution of microcode in a highly parallel way. The code is then sent to execution in bulk.
+2. 这些微指令被加载到名为 **重排缓冲区**（reorder buffer）的内部数组中。CPU 一次性可在重排缓冲区保存 200 多条指令。这种存储方式是为了以高度并行的方式执行微指令。然后批量发送代码到执行部分。
 
-3. Finally, results from the reorder buffer is then shipped out to memory in the correct order.
+3. 最后， 然后以正确的顺序将重排缓冲区的结果发送到内存。
 
-The existance of a re-order buffer has two important implications (that I know about) for how you should think about your code:
+重排缓冲区的存在对你应该如何思考代码有两个重要影响（我所知道的）：
 
-First, your code is executed in large chunks often in parallel, not necessarily in the same order as it was loaded in. Therefore, _a program with more, slower CPU instructions can be faster than a program with fewer, faster instructions_, if the former program manages to execute more of them in parallel.
+首先，通常以并行方式执行大块代码，并不需要与加载的顺序相同。因此，如果使用较多、较慢 CPU 指令的程序能够并行执行更多 CPU 指令，那么它能比使用较少、较快 CPU 指令的程序更快。
 
-Second, branch prediction (as discussed in the previous section) does not happen just for the upcoming branch, but instead for a large amount of future branches, simultaneously.
+其次，分支预测（参见上节的讨论）不仅会发生在紧接着的分支，还会同时发生在大量的未来分支上。
 
-When visualizing how the code of the small `copy_odds_branches!` loop above is executed, you may imagine that the branch predictor predicts all branches, say, 6 iterations of the loop into the future, loads the microcode of all 6 future iterations into the reorder buffer, executes them all in parallel, and _then_ verifies - still in parallel - that its branches were guessed correctly.
+在可视化小循环 `copy_odds_branches!` 代码的执行过程时，你可以想象分支预测器预测了所有分支，即循环中未来的 6 次迭代， 将6次迭代的微指令加载到重排缓冲区，并行执行它们，**然后** 验证（仍然是并行的）分支是否猜测正确。
 
- Indicentally, this bulk processing is why a branch mispredict is so bad for performance - if a branch turns out to be mispredicted, all the work in the reorder buffer must be scrapped, the and the CPU must start over with fetching new instructions, compile them to microcode, fill the buffer et cetera.
+很明显，这种批处理正是分支预测错误导致性能糟糕的原因 —- 如果某个分支被发现是错误预测的，那么重排缓冲区的所有的工作都应被抛弃，然后 CPU 必须重新开始拉取新指令，并将其编译为微指令等等。
 
-Let's think about the implications re-order buffer for a moment. Other than creating hard-to-predict branches, what kind of code can re write that messes up that workflow for the CPU?
+然后继续考虑重排缓冲区的影响。除了创建难以预测的分支外，我们能够编写什么样的代码来打乱CPU的工作流程？
 
-What if we do this?
+我们这样做会发生什么？
 """
 
 # ╔═╡ 7732b6d8-8dab-11eb-0bc2-19690386ec27
@@ -1251,39 +1251,40 @@ end
 
 # ╔═╡ a5d93434-8dac-11eb-34bf-91061089f0ef
 md"""
-If you think about it, `read_indices` does strictly less work than any of the `copy_odds` functions. It doesn't even check if the numbers it copies are odd. Yet it's more than three times slower than `copy_odds_branches`!
+仔细想想， `read_indices` 要比任何版本的 `copy_odds` 函数进行的操作都少。它甚至不检查复制的数是否为奇数。然而，它要比 `copy_odds_branches` 慢 3 倍！
 
-The difference is *memory dependencies*. We humans, seeing that the input data is simply a range of numbers, can tell _precisely_ what the function should do at every iteration: Simply copy the next number over. But the compiler _can't_ predict what the next number it loads will be, and therefore where it needs to store the loaded number. We say that the code has a memory dependency on the number it loads from `src`.
+区别正是 **内存依赖**。看见输入数据是一组简单的数字，我们人类就能准确地明白函数在每次迭代时执行的操作：简单地拷贝下一个数而已。但是，编译器**不能** 预测下一个即将加载的数，因此需要存储已加载的数。故称代码在从 `src` 加载数这部分产生了内存依赖。
 
-In that case, the reorder buffer is of no use. All the instructions get loaded in, but are simply kept idle in the reorder buffer, because they simply *cannot* be executed until it's "their turn".
+在此例中，重排缓冲区排不上用场。所有的指令都被加载进 CPU，但只能在重排缓冲区处于闲置状态，因为在“轮到它们”之前，他们**不能**被执行。
 
 Going back to the original example, that is why the perfectly predicted `copy_odds_branches!` performs better than `code_odds_branchless!`. Even though the latter has fewer instructions, it has a memory dependency: The index of `dst` where the odd number gets stored to depends on the last loop iteration. So fewer instructions can be executed at a time compared to the former function, where the branch predictor predicts several iterations ahead and allow for the parallel computation of multiple iterations.
+回到最初的例子，这就是为什么完美预测的 `copy_odds_branches!` 比 `code_odds_branchless!` 还要快。即使后者具有更少的指令，但是它具有内存依赖性：保存奇数的 `dst` 的索引取决于上一次迭代。而在前者执行时，分支预测器预测几次迭代，并且允许并行计算多次迭代。所以，相比前者一次只能执行更少的指令。
 """
 
 # ╔═╡ 0b6d234e-8af3-11eb-1ba9-a1dcf1497785
 md"""
-## Variable clock speed
+## 变化的时钟速度
 
-A modern laptop CPU optimized for low power consumption consumes roughly 25 watts of power on a chip as small as a stamp (and thinner than a human hair). Without proper cooling, this will cause the temperature of the CPU to skyrocket and melting the plastic of the chip, destroying it. Typically, CPUs have a maximal operating temperature of about 100 degrees C. Power consumption, and therefore heat generation, depends among many factors on clock speed, higher clock speeds generate more heat.
+做了功耗优化的现代笔记本电脑 CPU 大约只消耗 25W 的功率，但是芯片只有邮票大小（比人的头发丝还薄）。如果没有适当的散热，那么 CPU 的温度将会飙升，CPU 芯片中的塑料将会融化，芯片也就被毁坏了。一般情况下，CPU 的最高工作温度大约在 100 摄氏度。功耗和发热取决于诸多由时钟速度影响的因素，更高的时钟速度往往产生更多的热量。    
 
-Modern CPUs are able to adjust their clock speeds according to the CPU temperature to prevent the chip from destroying itself. Often, CPU temperature will be the limiting factor in how quick a CPU is able to run. In these situations, better physical cooling for your computer translates directly to a faster CPU. Old computers can often be revitalized simply by removing dust from the interior, and replacing the cooling fans and [CPU thermal paste](https://en.wikipedia.org/wiki/Thermal_grease)!
+为了避免自毁，现代 CPU 能够根据工作温度来调整其时钟速度。通常，CPU 工作温度会限制 CPU 的运行速度。在这些情景中，更好的物理散热直接意味着更快的 CPU。对于旧电脑，简单清理内部灰尘并替换散热扇和[CPU 导热膏](https://zh.wikipedia.org/wiki/%E5%B0%8E%E7%86%B1%E8%86%8F) 即可使其重获新生！
 
-As a programmer, there is not much you can do to take CPU temperature into account, but it is good to know. In particular, variations in CPU temperature often explain observed difference in performance:
+作为程序员，我们在 CPU 温度这件事上能做的不多，但了解的话更好。特别是，可观测到的性能差异通常可以用CPU 温度的改变来解释：
 
-* CPUs usually work fastest at the beginning of a workload, and then drop in performance as it reaches maximal temperature
-* SIMD instructions usually require more power than ordinary instructions, generating more heat, and lowering the clock frequency. This can offset some performance gains of SIMD, but SIMD will nearly always be more efficient when applicable. One exception is the relatively recent 512-bit SIMD instructions. In current (2021) CPUs, these instructions draw so much power that the resulting clock frequency lowering actually leads to overall performance decrease for some workloads. This problem will probably be solved in the near future, either by the power draw begin reduced, by consumer chips abandoning 512-bit SIMD, or by compilers refusing to compile to these instructions.
+* CPU 通常在负载刚开始时工作得最快，然后在达到最高温度时出现性能下降。
+* 与普通指令相比， SIMD 指令需要更多能量，产生更多的热量，并且会降低时钟频率。这会降低由 SIMD 带来的性能提升，但SIMD在其能生效时总是更高效的。一个例外是最近较新的 512 位 SIMD 指令。在现在（2021）的 CPU 上，这些指令消耗更多能量从而导致时钟频率降低，实际上会在某些负载中出现总体上的性能下降。这个问题可能会在不远的将来解决。要么降低指令功耗，要么消费者放弃 512 位 SIMD, 抑或是编译器拒绝编译这些指令。
 """
 
 # ╔═╡ 119d269c-8af3-11eb-1fdc-b7ac75b89cf2
 md"""
-## Multithreading
-In the bad old days, CPU clock speed would increase every year as new processors were brought onto the market. Partially because of heat generation, this acceleration slowed down once CPUs hit the 3 GHz mark. Now we see only minor clock speed increments every processor generation. Instead of raw speed of execution, the focus has shifted on getting more computation done per clock cycle. CPU caches, CPU pipelining (i.e. the entire re-order buffer "workflow"), branch prediction and SIMD instructions are all important contibutions in this area, and have all been covered here.
+## 多线程
+在古早年代，随着新处理器上市，CPU 时钟速度每年都会增长。部分提升是因为散热，但当 CPU 达到 3 GHz 后，这种加速效果就会减弱。现在，我们可以看到处理器代际间的时钟速度增量很小。现在的重点已经转移到了在每个时钟周期内执行更多的计算，而不是关注真实的执行速度。CPU 缓存、CPU 指令流水线（即重排缓冲区“工作流”）、分支预测以及 SIMD 指令都是这一领域的重要贡献，这些也都包含在本文。
 
-Another important area where CPUs have improved is simply in numbers: Almost all CPU chips contain multiple smaller CPUs, or *cores* inside them. Each core has their own small CPU cache, and does computations in parallel. Furthermore, many CPUs have a feature called *hyper-threading*, where two *threads* (i.e. streams of instructions) are able to run on each core. The idea is that whenever one process is stalled (e.g. because it experiences a cache miss or a branch misprediction), the other process can continue on the same core. The CPU "pretends" to have twice the amount of processors.
+另一 CPU 改进的重要方向是增加数量：几乎所有的 CPU 芯片都包含多个小型 CPU, 或者说 **核**。每个核都有它们自己的小型 CPU 缓存，并且能够并行地进行计算。另外，许多CPU 都支持一种叫做 **超线程** 的特性，它使得两个 **线程** （即指令流）能够运行在一个内核上。其思想是，当一个进程停止时（比如因为遭遇了缓存未命中或分支预测错误），另一个进程能够在同一个核上继续执行。CPU “假装“ 拥有两倍的处理器。
 
-Hyperthreading only really matters when your threads are sometimes prevented from doing work. Besides CPU-internal causes like cache misses, a thread can also be paused because it is waiting for an external resource like a webserver or data from a disk. If you are writing a program where some threads spend a significant time idling, the core can be used by the other thread, and hyperthreading can show its value.
+仅当线程可能会停止工作时，超线程技术才有意义。线程暂停的原因除了 CPU 内部的如缓存未命中，还可能是是等待外部资源，比如 web 服务器返回的数据或从硬盘读取的数据。如果在你编写的程序中部分线程花费大量的时间空转，那么内核即可被其他线程使用，此时超线程体现出了它的价值。
 
-Let's see our first parallel program in action. First, we need to make sure that Julia actually was started with the correct number of threads. To do this, start Julia with the `-t` option - e.g. `-t 8` for 8 threads. I have set Julia to have 4 threads:
+接下来看看第一个并行程序。首先，我们需要确保 Julia 启动了正确数量的线程。实现方式是启动时添加 `-t` 选项 —— 例如`-t 8`对应 8 线程。 我的 Julia 设置为了 4 线程：  
 """
 
 # ╔═╡ 1886f60e-8af3-11eb-2117-eb0014d2fca1
@@ -1298,8 +1299,8 @@ function half_asleep(start::Bool)
 		t1 = time()
 		while time() - t1 < 0.1
 			for i in 1:100000
-            	a, b = a + b, a
-			end
+                a, b = a + b, a
+            end
         end
         start || sleep(0.1)
     end
@@ -1325,20 +1326,20 @@ end
 
 # ╔═╡ 2d0bb0a6-8af3-11eb-384d-29fbb0f66f24
 md"""
-You can see that with this task, my computer can run 8 jobs in parallel almost as fast as it can run 1. But 16 jobs takes much longer. This is because 4 can run at the same time, and 4 more can sleep for a total of 8 concurrent jobs.
+可以看到在此任务中，我的电脑并行运行 8 项任务几乎和运行一项任务一样快。但是16 项任务花费的时间多些。这是因为 4 个任务可以同时运行，另外 4 个任务处于休眠状态，总共同时运行8个程序。
 
-For CPU-constrained programs, the core is kept busy with only one thread, and there is not much to do as a programmer to leverage hyperthreading. Actually, for the most optimized programs, it usually leads to better performance to *disable* hyperthreading. Most workloads are not that optimized and can really benefit from hyperthreading, however.
+对于 CPU 密集型程序，内存总是忙于一个线程，程序员并不能利用超线程做太多事。实际上，对于多数已经优化过的程序，**禁用** 超线程通常会带来更好的性能。然而，大多数程序是未被优化的，故可以从超线程中获益。
 
-#### Parallelizability
-Multithreading is more difficult that any of the other optimizations, and should be one of the last tools a programmer reaches for. However, it is also an impactful optimization. Scientific compute clusters usually contain many (e.g. hundreds, or thousands) of CPUs with tens of CPU cores each, offering a massive potential speed boost ripe for picking.
+#### 可并行性
+多线程要比其他任何的优化方式都难，故应该是程序员最后使用的工具。然而，它也是强有力的优化。科学计算集群通常配置有许多（成百上千）具有数十个核的CPU，这其中有着巨大的潜在性能提升空间。
 
-A prerequisite for efficient use of multithreading is that your computation is able to be broken up into multiple chunks that can be worked on independently. Luckily the majority of compute-heavy tasks (at least in my field of work, bioinformatics), contain sub-problems that are *embarassingly parallel*. This means that there is a natural and easy way to break it into sub-problems that can be processed independently. For example, if a certain __independent__ computation is required for 100 genes, it is natural to use one thread for each gene. The size of the problem is also important. There is a small overhead involved with spawning (creating) a thread, and fetching the result from the computation of a thread. Therefore, for it to pay off, each thread should have a task that takes at least a few microseconds to complete.
+一个高效使用多线程的前提是你的计算可以被拆分为多个独立执行的程序块。幸运的是，大多数计算密集型任务（至少我的领域，生物信息学），包含着一些 **易并行的** 子问题。这意味着可以使用自然且简单的方法将程序拆分为多个可独立处理的子问题。例如，如果需要对 100 个基因应用一定的 **独立** 计算，那么可以很自然地想到为每个基因分配一个线程。问题的规模也很重要。创建线程和从线程获取计算结果会有小的开销。因此，为了获得回报，每个线程都应执行至少需要几毫秒才能完成的任务。
 
-Let's have an example of a small embarrasingly parallel problem. We want to construct a [Julia set](https://en.wikipedia.org/wiki/Julia_set). Julia sets are named after Gaston Julia, and have nothing to do with the Julia language. Julia sets are (often) fractal sets of complex numbers. By mapping the real and complex component of the set's members to the X and Y pixel value of a screen, one can generate the LSD-trippy images associated with fractals.
+让我们考虑一个易并行的小例子。我们想要构建一个 [Julia 集](https://zh.wikipedia.org/wiki/%E6%9C%B1%E5%88%A9%E4%BA%9A%E9%9B%86%E5%90%88)。 Julia 集以 Gaston Julia 命名，与 Julia 语言无关。Julia 集（通常）是复数分形集合。通过把集合中复数的实部和虚部分别映射到屏幕的 X 与 Y 像素位置，我们就可以生成与分形集合有关的 LSD-trippy 图。
 
-The Julia set I create below is defined thus: We define a function $f(z) = z^2 + C$, where $C$ is some constant. We then record the number of times $f$ can be applied to any given complex number $z$ before $|z| > 2$. The number of iterations correspond to the brightness of one pixel in the image. We simply repeat this for a range of real and imaginary values in a grid to create an image.
+下面创建的 Julia 集的定义是：复函数$f(z) = z^2 + C$，其中 $C$ 是复常数。然后给定任意复数 $z$ ，记录在 $|z| > 2$ 之前 $f$ 可以作用到 $z$ 的迭代次数。迭代的次数对应了图像中像素的亮度。我们对一块网格的实部和虚部都执行此操作，从而绘制出图。  
 
-First, let's see a non-parallel solution:
+首先，我们写一个非并行的版本：
 """
 
 # ╔═╡ 316e5074-8af3-11eb-256b-c5b212f7e0d3
@@ -1381,7 +1382,7 @@ end;
 @time julia_single_threaded();
 
 # ╔═╡ 3e83981a-8af3-11eb-3c87-77797adb7e1f
-md"That took around 2 seconds on my computer. Now for a parallel one:"
+md"在我的电脑上，它大约花费 2 秒。现在来看并行的版本："
 
 # ╔═╡ 3e1c4090-8af3-11eb-33d0-b9c299fef20d
 begin
@@ -1412,27 +1413,27 @@ end;
 
 # ╔═╡ 4e8f6cb8-8af3-11eb-1746-9384995d7022
 md"""
-This is almost exactly 4 times as fast! With 4 threads, this is close to the best case scenario, only possible for near-perfect embarrasingly parallel tasks.
+多线程比单线程版本几乎快 4 倍！这接近 4 线程的最佳情况，不过这只对近乎完美的易并行任务来说是可能的。
 
-Despite the potential for great gains, in my opinion, multithreading should be one of the last resorts for performance improvements, for three reasons:
+在我看来，即使能够获得巨大的潜力，多线程也应该是最后启用的性能提升手段，原因有三：
 
-1. Implementing multithreading is harder than other optimization methods in many cases. In the example shown, it was very easy. In a complicated workflow, it can get messy quickly.
-2. Multithreading can cause hard-to-diagnose and erratic bugs. These are almost always related to multiple threads reading from, and writing to the same memory. For example, if two threads both increment an integer with value `N` at the same time, the two threads will both read `N` from memory and write `N+1` back to memory, where the correct result of two increments should be `N+2`! Infuriatingly, these bugs appear and disappear unpredictably, since they are causing by unlucky timing. These bugs of course have solutions, but it is tricky subject outside the scope of this document.
-3. Finally, achieving performance by using multiple threads is really achieving performance by consuming more resources, instead of gaining something from nothing. Often, you pay for using more threads, either literally when buying cloud compute time, or when paying the bill of increased electricity consumption from multiple CPU cores, or metaphorically by laying claim to more of your users' CPU resources they could use somewhere else. In contrast, more *efficent* computation costs nothing.
+1. 在大多数情境中实现多线程要比其他优化方法更难。本文所示的例子很简单，但在复杂的工作流中，他很快会变得一团糟。
+2. 多线程会使得程序难以调试和产生不稳定的 bug。 这通常与多个线程读取和写入同一块内存有关。例如，如果两个线程同时将整数 `N` 加一，那么两个线程将会都从程序中读取`N`而向内存写入`N+1`，正确的结果就变成了两次加法即`N+2`！令人恼火的是，这些 bug 的出现的消失时不可预测的，因为它们是不太幸运的时间导致的。这些 bug 的解决方案是比较棘手的话题，并且超出了本文的范围。
+3. 最后，通过多线程获得的性能是通过消耗更多的资源的实现的，而不是不劳而获。通常，你要为使用多线程付费，无论是在购买云计算时间时，还是为多核 CPU 增加的电力费用支付时，还是声称用户可能在其他地方使用了更多的 CPU 资源。相比之下，更 **高效的** 计算不消耗任何成本。
 """
 
 # ╔═╡ 54d2a5b8-8af3-11eb-3273-85d551fceb7b
 md"""
-## GPUs
-So far, we've covered only the most important kind of computing chip, the CPU. But there are many other kind of chips out there. The most common kind of alternative chip is the *graphical processing unit* or GPU.
+## GPU
+截止目前，我们已经讨论了计算芯片 CPU 的绝大部分话题。但是还存在其它类型的芯片。最常见的替代芯片是 **图形处理单元（graphical processing unit）**，即 GPU。
 
-As shown in the above example with the Julia set, the task of creating computer images are often embarassingly parallel with an extremely high degree of parallelizability. In the limit, the value of each pixel is an independent task. This calls for a chip with a high number of cores to do effectively. Because generating graphics is a fundamental part of what computers do, nearly all commercial computers contain a GPU. Often, it's a smaller chip integrated into the motherboard (*integrated graphics*, popular in small laptops). Other times, it's a large, bulky card.
+如上面 Julia 集合的例子所示，创建计算机图像的任务通常是具有极高并行度的易并行任务。极限情况下每一个像素都可以是单独的任务。这需要芯片能够有大量的核来进行高效计算。因为生成图像是计算机最基本的环节，所以几乎所有的商业电脑都包含 GPU。它通常是一块集成在主板上的小型芯片（**集成显卡**，在笔记本中很流行）。在其他情况下，它是又大又重的厚卡片。
 
-GPUs have sacrificed many of the bells and whistles of CPUs covered in this document such as specialized instructions, SIMD and branch prediction. They also usually run at lower frequencies than CPUs. This means that their raw compute power is many times slower than a CPU. To make up for this, they have a high number of cores. For example, the high-end gaming GPU NVIDIA RTX 2080Ti has 4,352 cores. Hence, some tasks can experience 10s or even 100s of times speedup using a GPU. Most notably for scientific applications, matrix and vector operations are highly parallelizable.
+GPU 牺牲掉了许多本文中所提到的 CPU 上的高级功能，如专用指令、 SIMD 和 分支预测。它们的工作频率也通常比 CPU 低。 这意味着，他们的裸计算能力要慢于 CPU。为了弥补这一点，它们使用了大量的核。例如，高端游戏 GPU NVIDIA RTX 2080Ti 有 4352 个核。因此，一些任务在使用 GPU 后获得 10 倍甚至 100 倍的加速。值得关注的是， 科学应用中的矩阵和向量计算都是高度并行的。
 
-Unfortunately, the laptop I'm writing this document on has only integrated graphics, and there is not yet a stable way to interface with integrated graphics using Julia, so I cannot show examples.
+不幸的是，用于本文写作的笔记本只有集成显卡。同时也没有稳定方式可以使得 Julia 与图形显卡交互，所以我给不出例子。
 
-There are also more esoteric chips like TPUs (explicitly designed for low-precision tensor operations common in deep learning) and ASICs (an umbrella term for highly specialized chips intended for one single application). At the time of writing, these chips are uncommon, expensive, poorly supported and have limited uses, and are therefore not of any interest for non-computer science researchers.
+还有一些更专用的芯片，比如TPU （专为深度学习中常见的低精度张量计算设计），以及 AISC（用于单一应用的高度专用芯片）。在写作本文时，这些芯片并不常见、价格昂贵、支持性差以及用途有限，因此非计算机领域的科学研究人员并不对它们感兴趣。
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
