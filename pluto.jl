@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.11
+# v0.20.21
 
 using Markdown
 using InteractiveUtils
@@ -13,9 +13,10 @@ end
 
 # ╔═╡ 15f5c31a-8aef-11eb-3f19-cf0a4e456e7a
 md"""
-# 每个科研工作者在写高性能代码时都需了解的硬件知识
+【写在前面】**本教程翻译自 https://viralinstruction.com/posts/hardware/**。部分示例的描述根据译者的设备做了一些调整。
 
-**本教程的英文版位于 https://github.com/jakobnissen/hardware_introduction**
+
+# 每个科研工作者在写高性能代码时都需了解的硬件知识
 
 现如今，编程已经成为许多科研领域的一项基本技能，许多科学家都需要为他们的科研项目编写一些特定的代码。
 不过，大部分科研工作者其实并不是科班出身的程序员，他们也仅仅只是因为需要才去学习编程。
@@ -78,7 +79,7 @@ $$[CPU] ↔ [RAM] ↔ [DISK]$$
 
 * 中央处理器（CPU）是一个邮票大小的芯片。它是计算机的大脑，即进行运算的地方。
 * 随机存取存储器（RAM，或简称“内存”）是计算机的短期存储器。该存储器需要电源来维持，而且当电脑关机时会遗失数据。RAM 临时地存储了在 CPU 和硬盘之间传输的数据。“加载”各种应用程序和操作系统所消耗的大部分时间都是用来将数据从硬盘转移到 RAM，并在RAM解压数据。典型的个人消费级笔记本电脑的 RAM 容量约为$10^{11}$ 比特。
-* 硬盘是大容量存储单元。这些硬盘上的数据在断开电源后依然存在，因此它涵盖了计算机的长期存储。每GB的硬盘比 RAM 便宜很多，个人消费级电脑的硬盘容量约为 $10^{13}$ 比特。
+* 硬盘（DISK）是大容量存储单元。这些硬盘上的数据在断开电源后依然存在，因此它涵盖了计算机的长期存储。每GB的硬盘比 RAM 便宜很多，个人消费级电脑的硬盘容量约为 $10^{13}$ 比特。
 """
 
 # ╔═╡ a2fad250-8aef-11eb-200f-e5f8caa57a67
@@ -113,7 +114,7 @@ $$[CPU] ↔ [RAM] ↔ [硬盘缓存] ↔ [硬盘]$$
 
 在我的电脑上，访问文件的一个字节（包括打开和关闭文件）要花费 500 µs，而访问内存中的 1,000,000 个整数花费 200 毫秒。所以硬盘延迟大约是 RAM 延迟的 2500 倍。因此，高性能计算**必须**避免重复访问文件。
 
-几年前， SSD 还不常见，并且 HDD 的吞吐量也要比今天小。因此，旧文本通常会警告人们，由于高吞吐量成本，一点也不要让你的程序依赖硬盘。但此建议在今天已经过时了，因为大多数程序都不能达到低价且现代的 SSD 的 1 GB/s 吞吐量瓶颈。此建议在今天只仍适用于那些**频繁**进行硬盘读写的程序，这会积累出高**延迟**。在这些情况下，你确实应该将数据保存在RAM 中。
+多年前， SSD 还不常见，并且 HDD 的吞吐量也要比今天小。因此，旧文本通常会警告人们，由于高吞吐量成本，一点也不要让你的程序依赖硬盘。但此建议在今天已经过时了，因为大多数程序都不能达到低价且现代的 SSD 的 1 GB/s 吞吐量瓶颈。此建议在今天只仍适用于那些**频繁**进行硬盘读写的程序，这会积累出高**延迟**。在这些情况下，你确实应该将数据保存在RAM 中。
 
 如果你试图每次往一个大文件里只读写一小部分数据，比如说每次读写 1 Byte，那么你就会触发最差的读写性能了。
 在这种情况下为了改善性能，一般会构造一个文件缓冲区来避免大量的读写操作。
@@ -179,7 +180,7 @@ Julia 中 `UInt` 类型的长度为 8 字节（64比特），所以步长为 15 
 
 # ╔═╡ 0f2ac53c-8c1b-11eb-3841-27f4ea1e9617
 md"""
-惊不惊喜？意不意外？线性访问模式竟然比随机访问要快 20 倍！聪明的小脑袋瓜肯定在好奇这是为什么了。
+惊不惊喜？意不意外？线性访问模式竟然比随机访问要快很多倍！这是怎么做到的呢？
 
 CPU 缓存旁边有一个叫做**预取器（prefetcher）**的小型电路。这个电路会收集CPU所访问的内存上的数据，并寻找特殊模式。
 当检测到这些模式时，它会根据这个模式去预测并提前取出不久后可能会被访问到的数据。因此，当 CPU 向内存请求数据时，数据其实已经保存在缓存中了。
@@ -216,7 +217,7 @@ CPU 只会从内存中请求某条缓存线，而不是内存地址 30 到 93 �
 """
 
 # ╔═╡ 3a1efd5a-8af0-11eb-21a2-d1011f16555c
-md"未对齐内存访问的后果依 CPU 型号而定。在我现在的 CPU 上，会存在约 15% 的性能下降。
+md"未对齐内存访问的后果依 CPU 型号而定。在我（原作者）现在的 CPU 上，会存在约 15% 的性能下降。
  在我最初写这本教程的旧电脑上，性能下降接近百分百。
 旧的处理器甚至会出现[更差的情况](https://www.kernel.org/doc/Documentation/unaligned-memory-access.txt) —— 难以置信的是，2001 年 Game Boy Advance 的 CPU 竟然会**静默执行不同的读取！** 😱
 
@@ -289,30 +290,28 @@ end;
 md"""
 让我们来分析一下：
 
-以 `;` 开头的行是注释，这些行会解释说明以下代码来自哪些部分。
-它们会展示嵌套的函数调用，以及函数在源代码中的位置。
+以 `;` 开头的行是注释，这些行会解释说明接下来的指令来自代码的哪些部分。
+它们展示了嵌套的函数调用，以及函数在源代码中的位置。
 你可以看到，`eachindex` 调用了 `axes1`，`axes1` 又调用了 `axes`，然后 `axes` 又调用了 `size`。
 在 `size` 那行注释下面，我们看到了第一条 CPU 指令。
-指令名位于最左侧，即 `movq`。
-名称由两部分组成，第一部分为 `mov`，它是指令的类型（即将数据移出或移入寄存器）；第二部分是后缀 `q`，这是 "quad" 的缩写，对应了 64-bit 整数。
-全部的后缀如下：`b` (byte, 8 位), `w` (word, 16 位), `l`, (long, 32 位) 和 `q` (quad, 64 位)。
+指令名位于最左侧，即 `push`（压栈）。紧跟在 `push` 后面的是该指令的参数：在当前的例子中是 `rbp` -- 一个专用寄存器。
 
-指令中接着的两列，`24(%rdi)` 和 `%rax` 是 `movq` 的参数。
-它们都是存储待操作数据的寄存器的名字。后文将会详细讨论寄存器。
+接下来的指令是`mov	rdx, qword ptr [rdi + 16]`。它的含义是：
+* `mov` 指令用于在寄存器之间或寄存器与内存之间传输数据
+* 第一个参数 `rdx` 是寄存器名称，并且是 **目标位置**
+* 第二个参数 `qword ptr [rdi + 16]` 表示：从一个指针所指向的内存地址中加载一个 `quad-word`（即 64 位整数），这个地址等于寄存器 `rdi` 中存储的数值再加上 16。
 
-查看大程序的汇编代码可以发现，汇编代码被分成了不同的节，并且这些节的命名都以“L”开头。
-例如，当运行上面的函数时，我们会看到 `L32` 节。这些节在 if 语句或者**代码分支**间跳转。这里的 `L32` 节对应了循环操作。你可以在 `L32` 节看到如下两条指令：
 
+你还可以看到（在更完整的汇编代码视图中），代码被划分为若干以字母 “L” 开头命名的代码段。例如，在我的运行结果中，有一个代码段 `LBB0_5`。这些代码段之间通过 if 语句，也就是 *分支跳转* 来相互跳转。这里，`LBB0_5` 标记的是实际的循环体。你可以在 `LBB0_5` 段中看到下面两条指令：
 ```
-; ││┌ @ promotion.jl:401 within `=='
-     cmpq    $1, %rdi
-; │└└
-     jne     L32
+	cmp	r8, rdi
+	...
+	jne	.LBB0_5
 ```
 
-第一条指令 `cmpq`（compare quad） 会将寄存器 `rdi` 中的数据与数字 1 进行比较，然后根据结果在 CPU 中设定一些 flag。
-其中，寄存器 `rdi` 中的数据对应了剩余的迭代次数（加 1）。
-下一条指令 `jne`（jump if not equal， 如果不等则跳转）会在 CPU 未设置 "equal" flag 时发生跳转。即当还有一次或多次迭代未执行时，程序发生跳转。这条指令会跳转到 'L32' 节，这意味着会重复执行该部分。
+第一条指令 `cmp`（整数比较）比较寄存器 `r8`和`rdi` 中的数据，并根据比较结果在 CPU 内部设置一些标志位，比如“相等”标志。
+
+下一条指令 `jne`（如果不相等则跳转）会在“相等”标志未被设置时发生跳转。你可以看到它跳转回 `LBB0_5`，这意味着在这种情况下该代码段会重复执行。
 """
 
 # ╔═╡ b73b5eaa-8af0-11eb-191f-cd15de19bc38
@@ -377,7 +376,7 @@ end;
 md"然而，现代编译器非常智能，常常能够在保证结果相同的情况下找出函数所对应的最佳指令。例如，整除指令 `idivq`会被替换为右位移指令（`shrq`），后者在合适的时候运算更快。你需要自行查看汇编代码："
 
 # ╔═╡ d376016a-8af0-11eb-3a15-4322759143d1
-# Calling it with debuginfo=:none removes the comments in the assembly code
+# Calling it with these keywords removes comments in the assembly code
 @code_native debuginfo=:none dump_module=false divide_slow(UInt(1))
 
 # ╔═╡ d70c56bc-8af0-11eb-1220-09e78dba26f7
@@ -406,7 +405,7 @@ md"下面的例子展示了为结果分配新内存的程序和直接在原向�
 # ╔═╡ f0e24b50-8af0-11eb-1a0e-5d925f3743e0
 begin
     function increment(x::Vector{<:Integer})
-        y = similar(x)
+        y = similar(x) # allocating a new vector
         @inbounds for i in eachindex(x)
             y[i] = x[i] + 1
         end
@@ -495,7 +494,7 @@ $$[CPU] ↔ [REGISTERS] ↔ [CACHE] ↔ [RAM] ↔ [DISK CACHE] ↔ [DISK]$$
 如果要操作大于单个寄存器的数据结构，那么数据必须被拆分成多个寄存器大小的小数据块。例如，当在我的电脑上将两个 128-bit 整数相加时："
 
 # ╔═╡ 7a88c4ba-8af1-11eb-242c-a1813a9e6741
-@code_native UInt128(5) + UInt128(11)
+@code_native debuginfo=:none dump_module=false UInt128(5) + UInt128(11)
 
 # ╔═╡ 7d3fcbd6-8af1-11eb-0441-2f88a9d59966
 md"""目前没有寄存器能够直接处理 128-bit 的情况。首先，使用 `addq` 指令将低位的 64 比特加起来，存入一个寄存器。然后，使用 `adcq` 指令计算高位比特的加法，该指令不仅将数组相加，还会使用前一指令的进位比特。最后，使用 `movq` 指令一次将结果移动 64 位。
@@ -660,7 +659,7 @@ end;
 # ╔═╡ bff99828-8aef-11eb-107b-a5c67101c735
 let
     data = rand(UInt, 2^24)
-    @time test_file("../alen/src/main.rs")
+    @time test_file("../reed/Cargo.lock")
     @time random_access(data, 1000000)
     nothing
 end
@@ -1442,7 +1441,7 @@ BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 
 [compat]
-BenchmarkTools = "~1.1.3"
+BenchmarkTools = "~1.6.3"
 PlutoUI = "~0.7.39"
 """
 
@@ -1450,236 +1449,291 @@ PlutoUI = "~0.7.39"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-[[AbstractPlutoDingetjes]]
+julia_version = "1.11.5"
+manifest_format = "2.0"
+project_hash = "3a5bce4c3fcc15190aec8833c662dfe5c76d3cc6"
+
+[[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
 git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
 uuid = "6e696c72-6542-2067-7265-42206c756150"
 version = "1.1.4"
 
-[[ArgTools]]
+[[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.1"
+version = "1.1.2"
 
-[[Artifacts]]
+[[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
+version = "1.11.0"
 
-[[Base64]]
+[[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+version = "1.11.0"
 
-[[BenchmarkTools]]
-deps = ["JSON", "Logging", "Printf", "Statistics", "UUIDs"]
-git-tree-sha1 = "42ac5e523869a84eac9669eaceed9e4aa0e1587b"
+[[deps.BenchmarkTools]]
+deps = ["Compat", "JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
+git-tree-sha1 = "7fecfb1123b8d0232218e2da0c213004ff15358d"
 uuid = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
-version = "1.1.4"
+version = "1.6.3"
 
-[[ColorTypes]]
+[[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "eb7f0f8307f71fac7c606984ea5fb2817275d6e4"
+git-tree-sha1 = "b10d0b65641d57b8b4d5e234446582de5047050d"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.4"
+version = "0.11.5"
 
-[[CompilerSupportLibraries_jll]]
+[[deps.Compat]]
+deps = ["TOML", "UUIDs"]
+git-tree-sha1 = "9d8a54ce4b17aa5bdce0ea5c34bc5e7c340d16ad"
+uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
+version = "4.18.1"
+weakdeps = ["Dates", "LinearAlgebra"]
+
+    [deps.Compat.extensions]
+    CompatLinearAlgebraExt = "LinearAlgebra"
+
+[[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.1.1+0"
 
-[[Dates]]
+[[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+version = "1.11.0"
 
-[[Downloads]]
+[[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
 uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
 version = "1.6.0"
 
-[[FileWatching]]
+[[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+version = "1.11.0"
 
-[[FixedPointNumbers]]
+[[deps.FixedPointNumbers]]
 deps = ["Statistics"]
-git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
+git-tree-sha1 = "05882d6995ae5c12bb5f36dd2ed3f61c98cbb172"
 uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
-version = "0.8.4"
+version = "0.8.5"
 
-[[Hyperscript]]
+[[deps.Hyperscript]]
 deps = ["Test"]
 git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
 uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
 version = "0.0.4"
 
-[[HypertextLiteral]]
+[[deps.HypertextLiteral]]
 deps = ["Tricks"]
-git-tree-sha1 = "c47c5fa4c5308f27ccaac35504858d8914e102f9"
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
 uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
-version = "0.9.4"
+version = "0.9.5"
 
-[[IOCapture]]
+[[deps.IOCapture]]
 deps = ["Logging", "Random"]
 git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
 uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
 version = "0.2.2"
 
-[[InteractiveUtils]]
+[[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
+version = "1.11.0"
 
-[[JSON]]
+[[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
-git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
+git-tree-sha1 = "31e996f0a15c7b280ba9f76636b3ff9e2ae58c9a"
 uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
-version = "0.21.3"
+version = "0.21.4"
 
-[[LibCURL]]
+[[deps.LibCURL]]
 deps = ["LibCURL_jll", "MozillaCACerts_jll"]
 uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
-version = "0.6.3"
+version = "0.6.4"
 
-[[LibCURL_jll]]
+[[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "7.84.0+0"
+version = "8.6.0+0"
 
-[[LibGit2]]
-deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
+[[deps.LibGit2]]
+deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+version = "1.11.0"
 
-[[LibSSH2_jll]]
+[[deps.LibGit2_jll]]
+deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
+uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
+version = "1.7.2+0"
+
+[[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
 uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
-version = "1.10.2+0"
+version = "1.11.0+1"
 
-[[Libdl]]
+[[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+version = "1.11.0"
 
-[[LinearAlgebra]]
-deps = ["Libdl", "libblastrampoline_jll"]
+[[deps.LinearAlgebra]]
+deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+version = "1.11.0"
 
-[[Logging]]
+[[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+version = "1.11.0"
 
-[[Markdown]]
+[[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+version = "1.11.0"
 
-[[MbedTLS_jll]]
+[[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.0+0"
+version = "2.28.6+0"
 
-[[Mmap]]
+[[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+version = "1.11.0"
 
-[[MozillaCACerts_jll]]
+[[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2022.2.1"
+version = "2023.12.12"
 
-[[NetworkOptions]]
+[[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 version = "1.2.0"
 
-[[OpenBLAS_jll]]
+[[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.20+0"
+version = "0.3.27+1"
 
-[[Parsers]]
-deps = ["Dates"]
-git-tree-sha1 = "3d5bf43e3e8b412656404ed9466f1dcbf7c50269"
+[[deps.Parsers]]
+deps = ["Dates", "PrecompileTools", "UUIDs"]
+git-tree-sha1 = "7d2f8f21da5db6a806faf7b9b292296da42b2810"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.4.0"
+version = "2.8.3"
 
-[[Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+[[deps.Pkg]]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.8.0"
+version = "1.11.0"
 
-[[PlutoUI]]
+    [deps.Pkg.extensions]
+    REPLExt = "REPL"
+
+    [deps.Pkg.weakdeps]
+    REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+
+[[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
 git-tree-sha1 = "8d1f54886b9037091edf146b517989fc4a09efec"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 version = "0.7.39"
 
-[[Printf]]
+[[deps.PrecompileTools]]
+deps = ["Preferences"]
+git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
+uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+version = "1.2.1"
+
+[[deps.Preferences]]
+deps = ["TOML"]
+git-tree-sha1 = "522f093a29b31a93e34eaea17ba055d850edea28"
+uuid = "21216c6a-2e73-6563-6e65-726566657250"
+version = "1.5.1"
+
+[[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+version = "1.11.0"
 
-[[REPL]]
-deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
-uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+[[deps.Profile]]
+uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
+version = "1.11.0"
 
-[[Random]]
-deps = ["SHA", "Serialization"]
+[[deps.Random]]
+deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+version = "1.11.0"
 
-[[Reexport]]
+[[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
 
-[[SHA]]
+[[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 version = "0.7.0"
 
-[[Serialization]]
+[[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
+version = "1.11.0"
 
-[[Sockets]]
-uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
-
-[[SparseArrays]]
-deps = ["LinearAlgebra", "Random"]
-uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
-
-[[Statistics]]
-deps = ["LinearAlgebra", "SparseArrays"]
+[[deps.Statistics]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+version = "1.11.1"
 
-[[TOML]]
+    [deps.Statistics.extensions]
+    SparseArraysExt = ["SparseArrays"]
+
+    [deps.Statistics.weakdeps]
+    SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+
+[[deps.TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
-version = "1.0.0"
+version = "1.0.3"
 
-[[Tar]]
+[[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 version = "1.10.0"
 
-[[Test]]
+[[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+version = "1.11.0"
 
-[[Tricks]]
-git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
+[[deps.Tricks]]
+git-tree-sha1 = "311349fd1c93a31f783f977a71e8b062a57d4101"
 uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.6"
+version = "0.1.13"
 
-[[UUIDs]]
+[[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+version = "1.11.0"
 
-[[Unicode]]
+[[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
+version = "1.11.0"
 
-[[Zlib_jll]]
+[[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
-version = "1.2.12+3"
+version = "1.2.13+1"
 
-[[libblastrampoline_jll]]
-deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
+[[deps.libblastrampoline_jll]]
+deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.1.1+0"
+version = "5.11.0+0"
 
-[[nghttp2_jll]]
+[[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.48.0+0"
+version = "1.59.0+0"
 
-[[p7zip_jll]]
+[[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
-version = "17.4.0+0"
+version = "17.4.0+2"
 """
 
 # ╔═╡ Cell order:
@@ -1703,7 +1757,7 @@ version = "17.4.0+0"
 # ╟─12f1228a-8af0-11eb-0449-230ae20bfa7a
 # ╠═18e8e4b6-8af0-11eb-2f17-2726f162e9b0
 # ╠═1f38f8c6-8ee5-11eb-1c01-f3706534a9cf
-# ╟─3a1efd5a-8af0-11eb-21a2-d1011f16555c
+# ╠═3a1efd5a-8af0-11eb-21a2-d1011f16555c
 # ╠═3fae31a0-8af0-11eb-1ea8-7980e7875039
 # ╟─5b10a2b6-8af0-11eb-3fe7-4b78b4c22550
 # ╠═6061dc94-8af0-11eb-215a-4f3af731774e
