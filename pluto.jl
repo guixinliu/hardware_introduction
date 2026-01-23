@@ -1257,7 +1257,6 @@ md"""
 
 在此例中，重排缓冲区排不上用场。所有的指令都被加载进 CPU，但只能在重排缓冲区处于闲置状态，因为在“轮到它们”之前，他们**不能**被执行。
 
-Going back to the original example, that is why the perfectly predicted `copy_odds_branches!` performs better than `code_odds_branchless!`. Even though the latter has fewer instructions, it has a memory dependency: The index of `dst` where the odd number gets stored to depends on the last loop iteration. So fewer instructions can be executed at a time compared to the former function, where the branch predictor predicts several iterations ahead and allow for the parallel computation of multiple iterations.
 回到最初的例子，这就是为什么完美预测的 `copy_odds_branches!` 比 `code_odds_branchless!` 还要快。即使后者具有更少的指令，但是它具有内存依赖性：保存奇数的 `dst` 的索引取决于上一次迭代。而在前者执行时，分支预测器预测几次迭代，并且允许并行计算多次迭代。所以，相比前者一次只能执行更少的指令。
 """
 
