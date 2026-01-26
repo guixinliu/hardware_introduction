@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.20.21
+# v0.20.13
 
 using Markdown
 using InteractiveUtils
@@ -296,20 +296,20 @@ md"""
 在 `size` 那行注释下面，我们看到了第一条 CPU 指令。
 指令名位于最左侧，即 `push`（压栈）。紧跟在 `push` 后面的是该指令的参数：在当前的例子中是 `rbp` -- 一个专用寄存器。
 
-接下来的指令是`mov	rdx, qword ptr [rdi + 16]`。它的含义是：
+接下来的指令是`mov	r8, qword ptr [rdi + 8]`。它的含义是：
 * `mov` 指令用于在寄存器之间或寄存器与内存之间传输数据
-* 第一个参数 `rdx` 是寄存器名称，并且是 **目标位置**
-* 第二个参数 `qword ptr [rdi + 16]` 表示：从一个指针所指向的内存地址中加载一个 `quad-word`（即 64 位整数），这个地址等于寄存器 `rdi` 中存储的数值再加上 16。
+* 第一个参数 `r8` 是寄存器名称，并且是 **目标位置**
+* 第二个参数 `qword ptr [rdi + 8]` 表示：从一个指针所指向的内存地址中加载一个 `quad-word`（即 64 位整数），这个地址等于寄存器 `rdi` 中存储的数值再加上 8。
 
 
 你还可以看到（在更完整的汇编代码视图中），代码被划分为若干以字母 “L” 开头命名的代码段。例如，在我的运行结果中，有一个代码段 `LBB0_5`。这些代码段之间通过 if 语句，也就是 *分支跳转* 来相互跳转。这里，`LBB0_5` 标记的是实际的循环体。你可以在 `LBB0_5` 段中看到下面两条指令：
 ```
-	cmp	r8, rdi
+	cmp	rdx, rdi
 	...
 	jne	.LBB0_5
 ```
 
-第一条指令 `cmp`（整数比较）比较寄存器 `r8`和`rdi` 中的数据，并根据比较结果在 CPU 内部设置一些标志位，比如“相等”标志。
+第一条指令 `cmp`（整数比较）比较寄存器 `rdx`和`rdi` 中的数据，并根据比较结果在 CPU 内部设置一些标志位，比如“相等”标志。
 
 下一条指令 `jne`（如果不相等则跳转）会在“相等”标志未被设置时发生跳转。你可以看到它跳转回 `LBB0_5`，这意味着在这种情况下该代码段会重复执行。
 """
@@ -1449,9 +1449,9 @@ PlutoUI = "~0.7.39"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.5"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "3a5bce4c3fcc15190aec8833c662dfe5c76d3cc6"
+project_hash = "1bf6658a93137ca6026b485f0aa78463fe79fa36"
 
 [[deps.AbstractPlutoDingetjes]]
 deps = ["Pkg"]
@@ -1461,15 +1461,13 @@ version = "1.1.4"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
-version = "1.1.2"
+version = "1.1.1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
-version = "1.11.0"
 
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
-version = "1.11.0"
 
 [[deps.BenchmarkTools]]
 deps = ["Compat", "JSON", "Logging", "Printf", "Profile", "Statistics", "UUIDs"]
@@ -1501,7 +1499,6 @@ version = "1.1.1+0"
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
-version = "1.11.0"
 
 [[deps.Downloads]]
 deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
@@ -1510,7 +1507,6 @@ version = "1.6.0"
 
 [[deps.FileWatching]]
 uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
-version = "1.11.0"
 
 [[deps.FixedPointNumbers]]
 deps = ["Statistics"]
@@ -1539,7 +1535,6 @@ version = "0.2.2"
 [[deps.InteractiveUtils]]
 deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
-version = "1.11.0"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -1555,17 +1550,16 @@ version = "0.6.4"
 [[deps.LibCURL_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
 uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
-version = "8.6.0+0"
+version = "8.4.0+0"
 
 [[deps.LibGit2]]
 deps = ["Base64", "LibGit2_jll", "NetworkOptions", "Printf", "SHA"]
 uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
-version = "1.11.0"
 
 [[deps.LibGit2_jll]]
 deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll"]
 uuid = "e37daf67-58a4-590a-8e99-b0245dd2ffc5"
-version = "1.7.2+0"
+version = "1.6.4+0"
 
 [[deps.LibSSH2_jll]]
 deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
@@ -1574,34 +1568,29 @@ version = "1.11.0+1"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
-version = "1.11.0"
 
 [[deps.LinearAlgebra]]
 deps = ["Libdl", "OpenBLAS_jll", "libblastrampoline_jll"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-version = "1.11.0"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
-version = "1.11.0"
 
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
-version = "1.11.0"
 
 [[deps.MbedTLS_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
-version = "2.28.6+0"
+version = "2.28.2+1"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
-version = "1.11.0"
 
 [[deps.MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
-version = "2023.12.12"
+version = "2023.1.10"
 
 [[deps.NetworkOptions]]
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
@@ -1610,7 +1599,7 @@ version = "1.2.0"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.27+1"
+version = "0.3.23+4"
 
 [[deps.Parsers]]
 deps = ["Dates", "PrecompileTools", "UUIDs"]
@@ -1619,15 +1608,9 @@ uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.8.3"
 
 [[deps.Pkg]]
-deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "Random", "SHA", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+deps = ["Artifacts", "Dates", "Downloads", "FileWatching", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
 uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
-version = "1.11.0"
-
-    [deps.Pkg.extensions]
-    REPLExt = "REPL"
-
-    [deps.Pkg.weakdeps]
-    REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
+version = "1.10.0"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
@@ -1650,16 +1633,18 @@ version = "1.5.1"
 [[deps.Printf]]
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
-version = "1.11.0"
 
 [[deps.Profile]]
+deps = ["Printf"]
 uuid = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
-version = "1.11.0"
+
+[[deps.REPL]]
+deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
+uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 
 [[deps.Random]]
 deps = ["SHA"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-version = "1.11.0"
 
 [[deps.Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -1672,13 +1657,15 @@ version = "0.7.0"
 
 [[deps.Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
-version = "1.11.0"
+
+[[deps.Sockets]]
+uuid = "6462fe0b-24de-5631-8697-dd941f90decc"
 
 [[deps.Statistics]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "ae3bb1eb3bba077cd276bc5cfc337cc65c3075c0"
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-version = "1.11.1"
+version = "1.10.0"
 
     [deps.Statistics.extensions]
     SparseArraysExt = ["SparseArrays"]
@@ -1699,7 +1686,6 @@ version = "1.10.0"
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-version = "1.11.0"
 
 [[deps.Tricks]]
 git-tree-sha1 = "311349fd1c93a31f783f977a71e8b062a57d4101"
@@ -1709,11 +1695,9 @@ version = "0.1.13"
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
 uuid = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
-version = "1.11.0"
 
 [[deps.Unicode]]
 uuid = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
-version = "1.11.0"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
@@ -1723,12 +1707,12 @@ version = "1.2.13+1"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.11.0+0"
+version = "5.8.0+1"
 
 [[deps.nghttp2_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
-version = "1.59.0+0"
+version = "1.52.0+1"
 
 [[deps.p7zip_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1757,7 +1741,7 @@ version = "17.4.0+2"
 # ╟─12f1228a-8af0-11eb-0449-230ae20bfa7a
 # ╠═18e8e4b6-8af0-11eb-2f17-2726f162e9b0
 # ╠═1f38f8c6-8ee5-11eb-1c01-f3706534a9cf
-# ╠═3a1efd5a-8af0-11eb-21a2-d1011f16555c
+# ╟─3a1efd5a-8af0-11eb-21a2-d1011f16555c
 # ╠═3fae31a0-8af0-11eb-1ea8-7980e7875039
 # ╟─5b10a2b6-8af0-11eb-3fe7-4b78b4c22550
 # ╠═6061dc94-8af0-11eb-215a-4f3af731774e
@@ -1766,7 +1750,7 @@ version = "17.4.0+2"
 # ╟─7b979410-8af0-11eb-299c-af0a5d740c24
 # ╟─8802ff60-8af0-11eb-21ac-b9fdbeac7c24
 # ╠═a36582d4-8af0-11eb-2b5a-e577c5ed07e2
-# ╠═a74a9966-8af0-11eb-350f-6787d2759eba
+# ╟─a74a9966-8af0-11eb-350f-6787d2759eba
 # ╟─ae9ee028-8af0-11eb-10c0-6f2db3ab8025
 # ╟─b73b5eaa-8af0-11eb-191f-cd15de19bc38
 # ╟─c0c757b2-8af0-11eb-38f1-3bc3ec4c43bc
